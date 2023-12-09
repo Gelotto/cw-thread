@@ -1,5 +1,8 @@
 use crate::error::ContractError;
-use crate::execute::{exec_set_config, Context};
+use crate::execute::reply::exec_reply;
+use crate::execute::set_config::exec_set_config;
+use crate::execute::vote::exec_vote;
+use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::query::{query_config, ReadonlyContext};
 use crate::state;
@@ -31,6 +34,8 @@ pub fn execute(
     let ctx = Context { deps, env, info };
     match msg {
         ExecuteMsg::SetConfig(config) => exec_set_config(ctx, config),
+        ExecuteMsg::Reply(msg) => exec_reply(ctx, msg),
+        ExecuteMsg::Vote(msg) => exec_vote(ctx, msg),
     }
 }
 

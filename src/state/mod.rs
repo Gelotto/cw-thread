@@ -1,5 +1,6 @@
 pub mod models;
 pub mod storage;
+pub mod views;
 
 use cosmwasm_std::Response;
 

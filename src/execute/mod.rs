@@ -1,7 +1,10 @@
-mod set_config;
+pub mod reply;
+pub mod set_config;
+pub mod vote;
+
+pub mod util;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
-pub use set_config::exec_set_config;
 
 pub struct Context<'a> {
     pub deps: DepsMut<'a>,
