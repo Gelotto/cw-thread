@@ -2,13 +2,17 @@ use crate::{
     error::ContractError,
     msg::NodeReplyMsg,
     state::{
-        models::{NodeMetadata, POSITIVE_SENTIMENT},
-        storage::{IX_RANKED_REPLIES, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA},
+        models::{NodeMetadata, POSITIVE},
+        storage::{
+            CHILD_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA,
+            POS_REPLY_RELATIONSHIP,
+        },
     },
+    util::next_node_id,
 };
 use cosmwasm_std::{attr, Response};
 
-use super::{util::next_node_id, Context};
+use super::Context;
 
 pub fn exec_reply(
     ctx: Context,
@@ -59,20 +63,20 @@ pub fn exec_reply(
         updated_at: None,
         created_by: info.sender.clone(),
         reply_to_id: Some(reply_to_id),
-        sentiment: POSITIVE_SENTIMENT,
+        sentiment: POSITIVE,
         n_attachments,
         n_replies: 0,
-        n_votes: 0,
+        rank: 0,
+        n_flags: 0,
     };
 
     NODE_ID_2_METADATA.save(deps.storage, child_id, &child_metadata)?;
 
-    // Insert into ranked replies index
-    IX_RANKED_REPLIES.save(
-        deps.storage,
-        (reply_to_id, (POSITIVE_SENTIMENT, 0, child_id)),
-        &true,
-    )?;
+    // Add to parent-child relationship
+    CHILD_RELATIONSHIP.save(deps.storage, (reply_to_id, child_id), &true)?;
+
+    // Add to ranked reply relationship
+    POS_REPLY_RELATIONSHIP.save(deps.storage, (reply_to_id, 0, child_id), &true)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "reply"),

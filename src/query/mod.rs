@@ -1,6 +1,6 @@
-mod config;
+pub mod info;
+pub mod nodes;
 
-pub use config::query_config;
 use cosmwasm_std::{Deps, Env};
 
 pub struct ReadonlyContext<'a> {
