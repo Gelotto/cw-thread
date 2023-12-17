@@ -3,6 +3,7 @@ use cosmwasm_std::{Addr, Timestamp};
 
 pub const NEGATIVE: u8 = 0;
 pub const POSITIVE: u8 = 1;
+pub const NEUTRAL: u8 = 2;
 
 #[cw_serde]
 pub struct Config {

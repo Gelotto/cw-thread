@@ -5,7 +5,10 @@ pub mod views;
 use cosmwasm_std::Response;
 use cw_lib::models::Owner;
 
-use crate::{error::ContractError, execute::Context, msg::InstantiateMsg};
+use crate::{
+    error::ContractError, execute::Context, msg::InstantiateMsg,
+    util::process_hashtags_and_callouts,
+};
 
 use self::{
     models::{Config, NodeMetadata, POSITIVE},
@@ -20,7 +23,7 @@ pub fn init(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let Context { deps, info, env } = ctx;
-    let node_id: u32 = 0;
+    let root_node_id: u32 = 0;
 
     if let Some(owner) = &msg.owner {
         deps.api.addr_validate(owner.to_addr().as_str())?;
@@ -36,20 +39,20 @@ pub fn init(
 
     NODE_ID_COUNTER.save(deps.storage, &u32::MAX)?;
 
-    NODE_ID_2_BODY.save(deps.storage, node_id, &msg.body)?;
+    NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body)?;
 
     // Save attachments
     let mut n_attachments: u8 = 0;
     for (i, attachment) in msg.attachments.unwrap_or_default().iter().enumerate() {
-        NODE_ID_2_ATTACHMENT.save(deps.storage, (node_id, i as u8), &attachment)?;
+        NODE_ID_2_ATTACHMENT.save(deps.storage, (root_node_id, i as u8), &attachment)?;
         n_attachments += 1;
     }
 
     NODE_ID_2_METADATA.save(
         deps.storage,
-        node_id,
+        root_node_id,
         &NodeMetadata {
-            id: node_id,
+            id: root_node_id,
             created_at: env.block.time,
             updated_at: None,
             created_by: info.sender.clone(),
@@ -61,6 +64,8 @@ pub fn init(
             n_flags: 0,
         },
     )?;
+
+    process_hashtags_and_callouts(deps.storage, root_node_id, &msg.body, false)?;
 
     Ok(Response::new().add_attribute("action", "instantiate"))
 }

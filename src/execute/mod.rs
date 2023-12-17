@@ -1,3 +1,5 @@
+pub mod delete_node;
+pub mod edit_node;
 pub mod flags;
 pub mod lifecycle;
 pub mod reply;

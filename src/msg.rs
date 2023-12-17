@@ -1,11 +1,19 @@
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Addr;
 use cw_lib::models::Owner;
 use cw_table::lifecycle::LifecycleExecuteMsg;
 
 use crate::state::{
-    models::{Attachment, Config, TableInfo},
+    models::{Attachment, Config, TableInfo, NEGATIVE, NEUTRAL, POSITIVE},
     views::NodeView,
 };
+
+#[cw_serde]
+pub enum Sentiment {
+    Positive,
+    Negative,
+    Neutral,
+}
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -23,9 +31,37 @@ pub struct NodeReplyMsg {
 }
 
 #[cw_serde]
+pub struct NodeEditMsg {
+    pub id: u32,
+    pub name: Option<String>,
+    pub body: Option<String>,
+    pub attachments: Option<Vec<Attachment>>,
+}
+
+#[cw_serde]
 pub struct NodeVoteMsg {
     pub id: u32,
-    pub is_positive: bool,
+    pub sentiment: Sentiment,
+}
+
+impl Sentiment {
+    pub fn from_u8(u8_sentiment: u8) -> Self {
+        if u8_sentiment == NEUTRAL {
+            Self::Neutral
+        } else if u8_sentiment == POSITIVE {
+            Self::Positive
+        } else {
+            Self::Negative
+        }
+    }
+
+    pub fn to_u8(&self) -> u8 {
+        match self {
+            Sentiment::Positive => POSITIVE,
+            Sentiment::Negative => NEGATIVE,
+            Sentiment::Neutral => NEUTRAL,
+        }
+    }
 }
 
 #[cw_serde]
@@ -34,26 +70,43 @@ pub enum ExecuteMsg {
     SetConfig(Config),
     Reply(NodeReplyMsg),
     Vote(NodeVoteMsg),
+    Edit(NodeEditMsg),
+    Delete { id: u32 },
     Flag { id: u32, reason: Option<String> },
     Unflag { id: u32 },
 }
 
 #[cw_serde]
 pub enum NodesQueryMsg {
-    ById(Vec<u32>),
+    ByIds {
+        ids: Vec<u32>,
+        sender: Option<Addr>,
+    },
     InReplyTo {
         id: u32,
         cursor: Option<(u8, u32, u32)>,
+        sender: Option<Addr>,
     },
     AncestorsOf {
         id: u32,
         levels: Option<u8>,
+        sender: Option<Addr>,
+    },
+    WithHashtag {
+        tag: String,
+        cursor: Option<u32>,
+        sender: Option<Addr>,
+    },
+    WithCallout {
+        callout: String,
+        cursor: Option<u32>,
+        sender: Option<Addr>,
     },
 }
 
 #[cw_serde]
 pub enum QueryMsg {
-    Thread {},
+    Thread { sender: Option<Addr> },
     Nodes(NodesQueryMsg),
 }
 
@@ -72,7 +125,13 @@ pub struct ThreadInfoResponse {
 }
 
 #[cw_serde]
-pub struct ReplyNodeViewPaginationResponse {
-    pub replies: Vec<NodeView>,
+pub struct NodeViewRepliesPaginationResponse {
+    pub nodes: Vec<NodeView>,
     pub cursor: Option<(u8, u32, u32)>,
+}
+
+#[cw_serde]
+pub struct NodeViewByTagPaginationResponse {
+    pub nodes: Vec<NodeView>,
+    pub cursor: Option<u32>,
 }

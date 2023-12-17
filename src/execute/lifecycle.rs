@@ -3,11 +3,7 @@ use crate::{
     state::{models::TableInfo, storage::TABLE},
 };
 use cosmwasm_std::{attr, Response};
-use cw_table::{
-    client::Table,
-    lifecycle::{LifecycleArgs, LifecycleSetupArgs},
-    msg::{KeyValue, Relationship, RelationshipUpdates, TagUpdate, TagUpdates},
-};
+use cw_table::lifecycle::{LifecycleArgs, LifecycleSetupArgs};
 
 use super::Context;
 

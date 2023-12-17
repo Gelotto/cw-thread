@@ -8,7 +8,7 @@ use crate::{
             POS_REPLY_RELATIONSHIP,
         },
     },
-    util::next_node_id,
+    util::{next_node_id, process_hashtags_and_callouts},
 };
 use cosmwasm_std::{attr, Response};
 
@@ -77,6 +77,8 @@ pub fn exec_reply(
 
     // Add to ranked reply relationship
     POS_REPLY_RELATIONSHIP.save(deps.storage, (reply_to_id, 0, child_id), &true)?;
+
+    process_hashtags_and_callouts(deps.storage, child_id, &body, false)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "reply"),

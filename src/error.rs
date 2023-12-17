@@ -12,6 +12,9 @@ pub enum ContractError {
     #[error("NodeNotFound: node {node_id:?} not found")]
     NodeNotFound { node_id: u32 },
 
+    #[error("AlreadyVoted: already voted this way for {node_id:?}")]
+    AlreadyVoted { node_id: u32 },
+
     #[error("ValidationError: {reason:?}")]
     ValidationError { reason: String },
 }
