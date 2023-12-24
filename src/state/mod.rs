@@ -13,7 +13,8 @@ use crate::{
 use self::{
     models::{Config, NodeMetadata, POSITIVE},
     storage::{
-        CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_COUNTER, OWNER,
+        CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
+        NODE_ID_COUNTER, OWNER,
     },
 };
 
@@ -40,6 +41,10 @@ pub fn init(
     NODE_ID_COUNTER.save(deps.storage, &u32::MAX)?;
 
     NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body)?;
+
+    if let Some(title) = msg.title {
+        NODE_ID_2_TITLE.save(deps.storage, root_node_id, &title)?;
+    }
 
     // Save attachments
     let mut n_attachments: u8 = 0;

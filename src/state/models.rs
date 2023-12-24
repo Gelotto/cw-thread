@@ -7,6 +7,7 @@ pub const NEUTRAL: u8 = 2;
 
 #[cw_serde]
 pub struct Config {
+    // TODO: make readonly if is_archived
     pub is_archived: bool,
 }
 

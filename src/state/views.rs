@@ -8,7 +8,10 @@ use crate::{error::ContractError, msg::Sentiment};
 
 use super::{
     models::{Attachment, NodeMetadata, NEUTRAL},
-    storage::{NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT},
+    storage::{
+        NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
+        NODE_ID_ADDR_2_SENTIMENT,
+    },
 };
 
 #[cw_serde]
@@ -19,6 +22,7 @@ pub struct NodeAccountView {
 #[cw_serde]
 pub struct NodeView {
     pub metadata: NodeMetadata,
+    pub title: Option<String>,
     pub body: String,
     pub attachments: Vec<Attachment>,
     pub account: Option<NodeAccountView>,
@@ -33,6 +37,7 @@ impl NodeView {
         let metadata = NODE_ID_2_METADATA.load(store, id)?;
 
         let body = NODE_ID_2_BODY.load(store, id)?;
+        let title = NODE_ID_2_TITLE.may_load(store, id)?;
 
         let attachments = NODE_ID_2_ATTACHMENT
             .range(
@@ -60,6 +65,7 @@ impl NodeView {
 
         Ok(Self {
             metadata,
+            title,
             body,
             attachments,
             account,

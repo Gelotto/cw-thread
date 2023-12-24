@@ -18,7 +18,7 @@ pub enum Sentiment {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub body: String,
-    pub name: Option<String>,
+    pub title: Option<String>,
     pub attachments: Option<Vec<Attachment>>,
     pub owner: Option<Owner>,
 }
@@ -33,7 +33,7 @@ pub struct NodeReplyMsg {
 #[cw_serde]
 pub struct NodeEditMsg {
     pub id: u32,
-    pub name: Option<String>,
+    pub title: Option<String>,
     pub body: Option<String>,
     pub attachments: Option<Vec<Attachment>>,
 }
