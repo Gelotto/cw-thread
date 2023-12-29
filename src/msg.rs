@@ -19,6 +19,8 @@ pub enum Sentiment {
 pub struct InstantiateMsg {
     pub body: String,
     pub title: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub handles: Option<Vec<String>>,
     pub attachments: Option<Vec<Attachment>>,
     pub owner: Option<Owner>,
 }
@@ -26,7 +28,9 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub struct NodeReplyMsg {
     pub body: String,
-    pub reply_to_id: u32,
+    pub tags: Option<Vec<String>>,
+    pub handles: Option<Vec<String>>,
+    pub parent_id: u32,
     pub attachments: Option<Vec<Attachment>>,
 }
 
@@ -36,6 +40,8 @@ pub struct NodeEditMsg {
     pub title: Option<String>,
     pub body: Option<String>,
     pub attachments: Option<Vec<Attachment>>,
+    pub tags: Option<Vec<String>>,
+    pub handles: Option<Vec<String>>,
 }
 
 #[cw_serde]
@@ -86,19 +92,20 @@ pub enum NodesQueryMsg {
         id: u32,
         cursor: Option<(u8, u32, u32)>,
         sender: Option<Addr>,
+        limit: Option<u8>,
     },
     AncestorsOf {
         id: u32,
         levels: Option<u8>,
         sender: Option<Addr>,
     },
-    WithHashtag {
+    WithTag {
         tag: String,
         cursor: Option<u32>,
         sender: Option<Addr>,
     },
-    WithCallout {
-        callout: String,
+    WithHandle {
+        handle: String,
         cursor: Option<u32>,
         sender: Option<Addr>,
     },

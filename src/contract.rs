@@ -10,8 +10,8 @@ use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, NodesQueryMsg, QueryMsg};
 use crate::query::info::query_thread_info;
 use crate::query::nodes::{
-    query_ancestor_nodes, query_nodes_by_id, query_nodes_by_tag_or_callout,
-    query_nodes_in_reply_to, TagWrapper,
+    query_ancestor_nodes, query_nodes_by_id, query_nodes_by_tag_or_handle, query_nodes_in_reply_to,
+    TagWrapper,
 };
 use crate::query::ReadonlyContext;
 use crate::state;
@@ -72,26 +72,29 @@ pub fn query(
             NodesQueryMsg::ByIds { ids, sender } => {
                 to_json_binary(&query_nodes_by_id(ctx, ids, sender)?)
             },
-            NodesQueryMsg::InReplyTo { id, cursor, sender } => {
-                to_json_binary(&query_nodes_in_reply_to(ctx, id, cursor, sender)?)
-            },
-            NodesQueryMsg::WithHashtag {
+            NodesQueryMsg::InReplyTo {
+                id,
+                cursor,
+                limit,
+                sender,
+            } => to_json_binary(&query_nodes_in_reply_to(ctx, id, cursor, limit, sender)?),
+            NodesQueryMsg::WithTag {
                 tag,
                 cursor,
                 sender,
-            } => to_json_binary(&query_nodes_by_tag_or_callout(
+            } => to_json_binary(&query_nodes_by_tag_or_handle(
                 ctx,
-                TagWrapper::Hashtag(tag),
+                TagWrapper::Tag(tag),
                 cursor,
                 sender,
             )?),
-            NodesQueryMsg::WithCallout {
-                callout,
+            NodesQueryMsg::WithHandle {
+                handle,
                 cursor,
                 sender,
-            } => to_json_binary(&query_nodes_by_tag_or_callout(
+            } => to_json_binary(&query_nodes_by_tag_or_handle(
                 ctx,
-                TagWrapper::Callout(callout),
+                TagWrapper::Handle(handle),
                 cursor,
                 sender,
             )?),

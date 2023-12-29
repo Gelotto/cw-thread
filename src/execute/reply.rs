@@ -8,7 +8,7 @@ use crate::{
             POS_REPLY_RELATIONSHIP,
         },
     },
-    util::{next_node_id, process_hashtags_and_callouts},
+    util::{next_node_id, process_tags_and_handles},
 };
 use cosmwasm_std::{attr, Response};
 
@@ -21,24 +21,24 @@ pub fn exec_reply(
     let Context { deps, env, info } = ctx;
     let NodeReplyMsg {
         body,
-        reply_to_id,
+        parent_id,
         attachments,
+        handles,
+        tags,
     } = msg;
 
     // TODO: Validate all data
 
-    // Ensure the reply_to node exists and update its total reply counter
+    // Ensure the parent_id node exists and update its total reply counter
     NODE_ID_2_METADATA.update(
         deps.storage,
-        reply_to_id,
+        parent_id,
         |maybe_parent| -> Result<_, ContractError> {
             if let Some(mut parent) = maybe_parent {
                 parent.n_replies += 1;
                 Ok(parent)
             } else {
-                Err(ContractError::NodeNotFound {
-                    node_id: reply_to_id,
-                })
+                Err(ContractError::NodeNotFound { node_id: parent_id })
             }
         },
     )?;
@@ -62,7 +62,7 @@ pub fn exec_reply(
         created_at: env.block.time,
         updated_at: None,
         created_by: info.sender.clone(),
-        reply_to_id: Some(reply_to_id),
+        parent_id: Some(parent_id),
         sentiment: POSITIVE,
         n_attachments,
         n_replies: 0,
@@ -73,16 +73,16 @@ pub fn exec_reply(
     NODE_ID_2_METADATA.save(deps.storage, child_id, &child_metadata)?;
 
     // Add to parent-child relationship
-    CHILD_RELATIONSHIP.save(deps.storage, (reply_to_id, child_id), &true)?;
+    CHILD_RELATIONSHIP.save(deps.storage, (parent_id, child_id), &true)?;
 
     // Add to ranked reply relationship
-    POS_REPLY_RELATIONSHIP.save(deps.storage, (reply_to_id, 0, child_id), &true)?;
+    POS_REPLY_RELATIONSHIP.save(deps.storage, (parent_id, 0, child_id), &true)?;
 
-    process_hashtags_and_callouts(deps.storage, child_id, &body, false)?;
+    process_tags_and_handles(deps.storage, child_id, tags, handles, false)?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "reply"),
-        attr("reply_to_id", reply_to_id.to_string()),
+        attr("parent_id", parent_id.to_string()),
         attr("reply_id", child_id.to_string()),
     ]))
 }

@@ -21,8 +21,8 @@ pub const POS_REPLY_RELATIONSHIP: Map<(u32, u32, u32), bool> = Map::new("pos_rep
 
 pub const CHILD_RELATIONSHIP: Map<(u32, u32), bool> = Map::new("child_rel");
 
-pub const CALLOUT_NODE_RELATIONSHIP: Map<(&String, u32), bool> = Map::new("callout_rel");
-pub const NODE_CALLOUT_RELATIONSHIP: Map<(u32, &String), bool> = Map::new("node_callout_rel");
+pub const HANDLE_NODE_RELATIONSHIP: Map<(&String, u32), bool> = Map::new("HANDLE_rel");
+pub const NODE_HANDLE_RELATIONSHIP: Map<(u32, &String), bool> = Map::new("NODE_HANDLE_rel");
 
-pub const HASHTAG_NODE_RELATIONSHIP: Map<(&String, u32), bool> = Map::new("hashtag_rel");
-pub const NODE_HASHTAG_RELATIONSHIP: Map<(u32, &String), bool> = Map::new("node_hashtag_rel");
+pub const TAG_NODE_RELATIONSHIP: Map<(&String, u32), bool> = Map::new("tag_rel");
+pub const NODE_TAG_RELATIONSHIP: Map<(u32, &String), bool> = Map::new("node_tag_rel");

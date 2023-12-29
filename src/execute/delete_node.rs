@@ -3,10 +3,10 @@ use crate::{
     state::{
         models::POSITIVE,
         storage::{
-            CALLOUT_NODE_RELATIONSHIP, CHILD_RELATIONSHIP, HASHTAG_NODE_RELATIONSHIP,
-            NEG_REPLY_RELATIONSHIP, NODE_CALLOUT_RELATIONSHIP, NODE_ID_2_ATTACHMENT,
-            NODE_ID_2_BODY, NODE_ID_2_FLAG, NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT,
-            POS_REPLY_RELATIONSHIP,
+            CHILD_RELATIONSHIP, HANDLE_NODE_RELATIONSHIP, NEG_REPLY_RELATIONSHIP,
+            NODE_HANDLE_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_FLAG,
+            NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, POS_REPLY_RELATIONSHIP,
+            TAG_NODE_RELATIONSHIP,
         },
     },
     util::load_node_metadata,
@@ -25,7 +25,7 @@ pub fn exec_delete_node(
     // Remove metadata
     NODE_ID_2_METADATA.remove(deps.storage, id);
 
-    if let Some(parent_id) = node.reply_to_id {
+    if let Some(parent_id) = node.parent_id {
         // Remove child relationship
         CHILD_RELATIONSHIP.remove(deps.storage, (parent_id, id));
 
@@ -83,9 +83,9 @@ pub fn exec_delete_node(
         NODE_ID_2_ATTACHMENT.remove(deps.storage, (id, i));
     }
 
-    // Remove callouts
+    // Remove handles
     {
-        let map = HASHTAG_NODE_RELATIONSHIP;
+        let map = TAG_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -95,7 +95,7 @@ pub fn exec_delete_node(
         }
     }
     {
-        let map = CALLOUT_NODE_RELATIONSHIP;
+        let map = HANDLE_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -104,13 +104,13 @@ pub fn exec_delete_node(
             map.remove(deps.storage, (a, *b));
         }
         for (a, b) in keys.iter() {
-            CALLOUT_NODE_RELATIONSHIP.remove(deps.storage, (a, *b));
+            HANDLE_NODE_RELATIONSHIP.remove(deps.storage, (a, *b));
         }
     }
 
     // Remove tags
     {
-        let map = NODE_CALLOUT_RELATIONSHIP;
+        let map = NODE_HANDLE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -121,7 +121,7 @@ pub fn exec_delete_node(
         }
     }
     {
-        let map = CALLOUT_NODE_RELATIONSHIP;
+        let map = HANDLE_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())

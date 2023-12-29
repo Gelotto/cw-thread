@@ -27,12 +27,17 @@ pub enum Attachment {
         url: String,
         name: Option<String>,
     },
+    Code {
+        language: Option<String>,
+        caption: Option<String>,
+        text: String,
+    },
 }
 
 #[cw_serde]
 pub struct NodeMetadata {
     pub id: u32,
-    pub reply_to_id: Option<u32>,
+    pub parent_id: Option<u32>,
     pub created_at: Timestamp,
     pub updated_at: Option<Timestamp>,
     pub created_by: Addr,

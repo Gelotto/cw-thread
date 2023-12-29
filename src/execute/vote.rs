@@ -47,7 +47,7 @@ pub fn exec_vote(
         curr_user_sentiment_u8,
     )?;
 
-    if let Some(parent_id) = meta.reply_to_id {
+    if let Some(parent_id) = meta.parent_id {
         // Remove stale entry from previous reply relationship map
         (if prev_sentiment_u8 == POSITIVE {
             POS_REPLY_RELATIONSHIP

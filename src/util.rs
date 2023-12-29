@@ -7,8 +7,8 @@ use crate::{
     state::{
         models::NodeMetadata,
         storage::{
-            CALLOUT_NODE_RELATIONSHIP, HASHTAG_NODE_RELATIONSHIP, NODE_CALLOUT_RELATIONSHIP,
-            NODE_HASHTAG_RELATIONSHIP, NODE_ID_2_METADATA, NODE_ID_COUNTER,
+            HANDLE_NODE_RELATIONSHIP, NODE_HANDLE_RELATIONSHIP, NODE_ID_2_METADATA,
+            NODE_ID_COUNTER, NODE_TAG_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
         },
     },
 };
@@ -38,47 +38,47 @@ pub fn next_node_id(store: &mut dyn Storage) -> Result<u32, ContractError> {
     )
 }
 
-pub fn process_hashtags_and_callouts(
+pub fn process_tags_and_handles(
     store: &mut dyn Storage,
     node_id: u32,
-    body: &String,
+    maybe_tags: Option<Vec<String>>,
+    maybe_handles: Option<Vec<String>>,
     is_editing: bool,
 ) -> Result<(HashSet<String>, HashSet<String>), ContractError> {
-    let mut hashtags: HashSet<String> = HashSet::with_capacity(2);
-    let mut callouts: HashSet<String> = HashSet::with_capacity(2);
+    let mut tags: HashSet<String> = HashSet::with_capacity(2);
+    let mut handles: HashSet<String> = HashSet::with_capacity(2);
 
-    for token in body.split_whitespace() {
-        if token.starts_with("#") {
-            if let Some(tag) = token.strip_prefix("#") {
-                let tag = tag.to_lowercase();
-                if !hashtags.contains(&tag) {
-                    let tag = tag.to_owned();
-                    HASHTAG_NODE_RELATIONSHIP.save(store, (&tag, node_id), &true)?;
-                    NODE_HASHTAG_RELATIONSHIP.save(store, (node_id, &tag), &true)?;
-                    hashtags.insert(tag);
-                }
-            }
-        } else if token.starts_with("@") {
-            if let Some(callout) = token.strip_prefix("@") {
-                let callout = callout.to_lowercase();
-                if !callouts.contains(&callout) {
-                    let callout = callout.to_owned();
-                    HASHTAG_NODE_RELATIONSHIP.save(store, (&callout, node_id), &true)?;
-                    NODE_HASHTAG_RELATIONSHIP.save(store, (node_id, &callout), &true)?;
-                    callouts.insert(callout);
-                }
+    for token in maybe_tags.unwrap_or_default().iter() {
+        let tag = token.to_lowercase();
+        // TODO: validate tag
+        if !tags.contains(&tag) {
+            let tag = tag.to_owned();
+            TAG_NODE_RELATIONSHIP.save(store, (&tag, node_id), &true)?;
+            NODE_TAG_RELATIONSHIP.save(store, (node_id, &tag), &true)?;
+            tags.insert(tag);
+        }
+    }
+    for token in maybe_handles.unwrap_or_default().iter() {
+        // TODO: validate handle
+        if let Some(handle) = token.strip_prefix("@") {
+            let handle = handle.to_lowercase();
+            if !handles.contains(&handle) {
+                let handle = handle.to_owned();
+                TAG_NODE_RELATIONSHIP.save(store, (&handle, node_id), &true)?;
+                NODE_TAG_RELATIONSHIP.save(store, (node_id, &handle), &true)?;
+                handles.insert(handle);
             }
         }
     }
 
     if is_editing {
-        // Remove old tags and callouts
-        for tag in NODE_HASHTAG_RELATIONSHIP
+        // Remove old tags and handles
+        for tag in NODE_TAG_RELATIONSHIP
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
             .filter_map(|r| {
                 let tag = r.unwrap();
-                if !hashtags.contains(&tag) {
+                if !tags.contains(&tag) {
                     Some(tag)
                 } else {
                     None
@@ -86,26 +86,26 @@ pub fn process_hashtags_and_callouts(
             })
             .collect::<Vec<String>>()
         {
-            NODE_HASHTAG_RELATIONSHIP.remove(store, (node_id, &tag));
-            HASHTAG_NODE_RELATIONSHIP.remove(store, (&tag, node_id));
+            NODE_TAG_RELATIONSHIP.remove(store, (node_id, &tag));
+            TAG_NODE_RELATIONSHIP.remove(store, (&tag, node_id));
         }
-        for callout in NODE_CALLOUT_RELATIONSHIP
+        for handle in NODE_HANDLE_RELATIONSHIP
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
             .filter_map(|r| {
-                let callout = r.unwrap();
-                if !callouts.contains(&callout) {
-                    Some(callout)
+                let handle = r.unwrap();
+                if !handles.contains(&handle) {
+                    Some(handle)
                 } else {
                     None
                 }
             })
             .collect::<Vec<String>>()
         {
-            NODE_CALLOUT_RELATIONSHIP.remove(store, (node_id, &callout));
-            CALLOUT_NODE_RELATIONSHIP.remove(store, (&callout, node_id));
+            NODE_HANDLE_RELATIONSHIP.remove(store, (node_id, &handle));
+            HANDLE_NODE_RELATIONSHIP.remove(store, (&handle, node_id));
         }
     }
 
-    Ok((hashtags, callouts))
+    Ok((tags, handles))
 }

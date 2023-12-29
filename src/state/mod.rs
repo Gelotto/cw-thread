@@ -6,8 +6,7 @@ use cosmwasm_std::Response;
 use cw_lib::models::Owner;
 
 use crate::{
-    error::ContractError, execute::Context, msg::InstantiateMsg,
-    util::process_hashtags_and_callouts,
+    error::ContractError, execute::Context, msg::InstantiateMsg, util::process_tags_and_handles,
 };
 
 use self::{
@@ -61,7 +60,7 @@ pub fn init(
             created_at: env.block.time,
             updated_at: None,
             created_by: info.sender.clone(),
-            reply_to_id: None,
+            parent_id: None,
             sentiment: POSITIVE,
             n_attachments,
             n_replies: 0,
@@ -70,7 +69,7 @@ pub fn init(
         },
     )?;
 
-    process_hashtags_and_callouts(deps.storage, root_node_id, &msg.body, false)?;
+    process_tags_and_handles(deps.storage, root_node_id, msg.tags, msg.handles, false)?;
 
     Ok(Response::new().add_attribute("action", "instantiate"))
 }

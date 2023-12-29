@@ -9,8 +9,8 @@ use crate::{
     state::{
         models::{NEGATIVE, POSITIVE},
         storage::{
-            CALLOUT_NODE_RELATIONSHIP, HASHTAG_NODE_RELATIONSHIP, NEG_REPLY_RELATIONSHIP,
-            POS_REPLY_RELATIONSHIP,
+            HANDLE_NODE_RELATIONSHIP, NEG_REPLY_RELATIONSHIP, POS_REPLY_RELATIONSHIP,
+            TAG_NODE_RELATIONSHIP,
         },
         views::NodeView,
     },
@@ -19,9 +19,11 @@ use crate::{
 
 use super::ReadonlyContext;
 
+pub const DEFAULT_PAGINATION_LIMIT: u8 = 25;
+
 pub enum TagWrapper {
-    Hashtag(String),
-    Callout(String),
+    Tag(String),
+    Handle(String),
 }
 
 pub fn query_nodes_by_id(
@@ -41,11 +43,15 @@ pub fn query_nodes_in_reply_to(
     ctx: ReadonlyContext,
     parent_id: u32,
     cursor: Option<(u8, u32, u32)>,
+    limit: Option<u8>,
     sender: Option<Addr>,
 ) -> Result<NodeViewRepliesPaginationResponse, ContractError> {
     let ReadonlyContext { deps, .. } = ctx;
     let parent_metadata = load_node_metadata(deps.storage, parent_id, true)?.unwrap();
-    let page_size = parent_metadata.n_replies.min(25) as usize;
+    let page_size = parent_metadata
+        .n_replies
+        .min(limit.unwrap_or(DEFAULT_PAGINATION_LIMIT) as u16)
+        .min(DEFAULT_PAGINATION_LIMIT as u16) as usize;
 
     // Starting point for resuming pagination using the cursor:
     let mut cursor_sentiment = POSITIVE;
@@ -72,10 +78,10 @@ pub fn query_nodes_in_reply_to(
         }
     }
 
-    if replies.len() < 25 {
+    if replies.len() < DEFAULT_PAGINATION_LIMIT as usize {
         for result in NEG_REPLY_RELATIONSHIP
             .keys(deps.storage, None, start, Order::Descending)
-            .take(25 - replies.len())
+            .take(DEFAULT_PAGINATION_LIMIT as usize - replies.len())
         {
             let (_, rank, child_id) = result?;
             replies.push(NodeView::load(deps.storage, child_id, &sender)?);
@@ -102,12 +108,12 @@ pub fn query_ancestor_nodes(
     let mut nodes: Vec<NodeView> = Vec::with_capacity(levels as usize);
 
     let start_node_metadata = load_node_metadata(deps.storage, start_node_id, true)?.unwrap();
-    let mut maybe_parent_id = start_node_metadata.reply_to_id;
+    let mut maybe_parent_id = start_node_metadata.parent_id;
 
     for _ in 0..levels {
         if let Some(parent_id) = maybe_parent_id {
             let node = NodeView::load(deps.storage, parent_id, &sender)?;
-            maybe_parent_id = node.metadata.reply_to_id.clone();
+            maybe_parent_id = node.metadata.parent_id.clone();
             nodes.push(node);
         } else {
             break;
@@ -117,7 +123,7 @@ pub fn query_ancestor_nodes(
     Ok(nodes)
 }
 
-pub fn query_nodes_by_tag_or_callout(
+pub fn query_nodes_by_tag_or_handle(
     ctx: ReadonlyContext,
     wrapped_tag: TagWrapper,
     cursor: Option<u32>,
@@ -131,14 +137,14 @@ pub fn query_nodes_by_tag_or_callout(
         None
     };
     let (map, tag) = match wrapped_tag {
-        TagWrapper::Hashtag(s) => (HASHTAG_NODE_RELATIONSHIP, s.to_lowercase()),
-        TagWrapper::Callout(s) => (CALLOUT_NODE_RELATIONSHIP, s.to_lowercase()),
+        TagWrapper::Tag(s) => (TAG_NODE_RELATIONSHIP, s.to_lowercase()),
+        TagWrapper::Handle(s) => (HANDLE_NODE_RELATIONSHIP, s.to_lowercase()),
     };
 
     for result in map
         .prefix(&tag)
         .keys(deps.storage, None, start, Order::Descending)
-        .take(25)
+        .take(DEFAULT_PAGINATION_LIMIT as usize)
     {
         let node_id = result?;
         nodes.push(NodeView::load(deps.storage, node_id, &sender)?);
