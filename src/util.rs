@@ -7,8 +7,8 @@ use crate::{
     state::{
         models::NodeMetadata,
         storage::{
-            HANDLE_NODE_RELATIONSHIP, NODE_HANDLE_RELATIONSHIP, NODE_ID_2_METADATA,
-            NODE_ID_COUNTER, NODE_TAG_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
+            MENTION_NODE_RELATIONSHIP, NODE_ID_2_METADATA, NODE_ID_COUNTER,
+            NODE_MENTION_RELATIONSHIP, NODE_TAG_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
         },
     },
 };
@@ -38,15 +38,15 @@ pub fn next_node_id(store: &mut dyn Storage) -> Result<u32, ContractError> {
     )
 }
 
-pub fn process_tags_and_handles(
+pub fn process_tags_and_mentions(
     store: &mut dyn Storage,
     node_id: u32,
     maybe_tags: Option<Vec<String>>,
-    maybe_handles: Option<Vec<String>>,
+    maybe_mentions: Option<Vec<String>>,
     is_editing: bool,
 ) -> Result<(HashSet<String>, HashSet<String>), ContractError> {
     let mut tags: HashSet<String> = HashSet::with_capacity(2);
-    let mut handles: HashSet<String> = HashSet::with_capacity(2);
+    let mut mentions: HashSet<String> = HashSet::with_capacity(2);
 
     for token in maybe_tags.unwrap_or_default().iter() {
         let tag = token.to_lowercase();
@@ -58,21 +58,21 @@ pub fn process_tags_and_handles(
             tags.insert(tag);
         }
     }
-    for token in maybe_handles.unwrap_or_default().iter() {
-        // TODO: validate handle
-        if let Some(handle) = token.strip_prefix("@") {
-            let handle = handle.to_lowercase();
-            if !handles.contains(&handle) {
-                let handle = handle.to_owned();
-                TAG_NODE_RELATIONSHIP.save(store, (&handle, node_id), &true)?;
-                NODE_TAG_RELATIONSHIP.save(store, (node_id, &handle), &true)?;
-                handles.insert(handle);
+    for token in maybe_mentions.unwrap_or_default().iter() {
+        // TODO: validate mention
+        if let Some(mention) = token.strip_prefix("@") {
+            let mention = mention.to_lowercase();
+            if !mentions.contains(&mention) {
+                let mention = mention.to_owned();
+                TAG_NODE_RELATIONSHIP.save(store, (&mention, node_id), &true)?;
+                NODE_TAG_RELATIONSHIP.save(store, (node_id, &mention), &true)?;
+                mentions.insert(mention);
             }
         }
     }
 
     if is_editing {
-        // Remove old tags and handles
+        // Remove old tags and mentions
         for tag in NODE_TAG_RELATIONSHIP
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
@@ -89,23 +89,23 @@ pub fn process_tags_and_handles(
             NODE_TAG_RELATIONSHIP.remove(store, (node_id, &tag));
             TAG_NODE_RELATIONSHIP.remove(store, (&tag, node_id));
         }
-        for handle in NODE_HANDLE_RELATIONSHIP
+        for mention in NODE_MENTION_RELATIONSHIP
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
             .filter_map(|r| {
-                let handle = r.unwrap();
-                if !handles.contains(&handle) {
-                    Some(handle)
+                let mention = r.unwrap();
+                if !mentions.contains(&mention) {
+                    Some(mention)
                 } else {
                     None
                 }
             })
             .collect::<Vec<String>>()
         {
-            NODE_HANDLE_RELATIONSHIP.remove(store, (node_id, &handle));
-            HANDLE_NODE_RELATIONSHIP.remove(store, (&handle, node_id));
+            NODE_MENTION_RELATIONSHIP.remove(store, (node_id, &mention));
+            MENTION_NODE_RELATIONSHIP.remove(store, (&mention, node_id));
         }
     }
 
-    Ok((tags, handles))
+    Ok((tags, mentions))
 }

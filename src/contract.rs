@@ -5,13 +5,13 @@ use crate::execute::flags::{exec_flag, exec_unflag};
 use crate::execute::lifecycle::{exec_resume, exec_setup, exec_suspend, exec_teardown};
 use crate::execute::reply::exec_reply;
 use crate::execute::set_config::exec_set_config;
-use crate::execute::vote::exec_vote;
+use crate::execute::vote::{exec_vote, exec_votes};
 use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, NodesQueryMsg, QueryMsg};
 use crate::query::info::query_thread_info;
 use crate::query::nodes::{
-    query_ancestor_nodes, query_nodes_by_id, query_nodes_by_tag_or_handle, query_nodes_in_reply_to,
-    TagWrapper,
+    query_ancestor_nodes, query_nodes_by_id, query_nodes_by_tag_or_mention,
+    query_nodes_in_reply_to, TagWrapper,
 };
 use crate::query::ReadonlyContext;
 use crate::state;
@@ -46,6 +46,7 @@ pub fn execute(
         ExecuteMsg::SetConfig(config) => exec_set_config(ctx, config),
         ExecuteMsg::Reply(msg) => exec_reply(ctx, msg),
         ExecuteMsg::Vote(msg) => exec_vote(ctx, msg),
+        ExecuteMsg::VoteMany(msgs) => exec_votes(ctx, msgs),
         ExecuteMsg::Edit(msg) => exec_edit_node(ctx, msg),
         ExecuteMsg::Delete { id } => exec_delete_node(ctx, id),
         ExecuteMsg::Flag { id, reason } => exec_flag(ctx, id, reason),
@@ -82,19 +83,19 @@ pub fn query(
                 tag,
                 cursor,
                 sender,
-            } => to_json_binary(&query_nodes_by_tag_or_handle(
+            } => to_json_binary(&query_nodes_by_tag_or_mention(
                 ctx,
                 TagWrapper::Tag(tag),
                 cursor,
                 sender,
             )?),
-            NodesQueryMsg::WithHandle {
-                handle,
+            NodesQueryMsg::WithMention {
+                mention,
                 cursor,
                 sender,
-            } => to_json_binary(&query_nodes_by_tag_or_handle(
+            } => to_json_binary(&query_nodes_by_tag_or_mention(
                 ctx,
-                TagWrapper::Handle(handle),
+                TagWrapper::Mention(mention),
                 cursor,
                 sender,
             )?),

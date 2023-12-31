@@ -2,13 +2,13 @@ use crate::{
     error::ContractError,
     msg::NodeReplyMsg,
     state::{
-        models::{NodeMetadata, POSITIVE},
+        models::{NodeMetadata, UP},
         storage::{
             CHILD_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA,
-            POS_REPLY_RELATIONSHIP,
+            UP_REPLY_RELATIONSHIP,
         },
     },
-    util::{next_node_id, process_tags_and_handles},
+    util::{next_node_id, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Response};
 
@@ -23,7 +23,7 @@ pub fn exec_reply(
         body,
         parent_id,
         attachments,
-        handles,
+        mentions,
         tags,
     } = msg;
 
@@ -63,7 +63,7 @@ pub fn exec_reply(
         updated_at: None,
         created_by: info.sender.clone(),
         parent_id: Some(parent_id),
-        sentiment: POSITIVE,
+        sentiment: UP,
         n_attachments,
         n_replies: 0,
         rank: 0,
@@ -76,9 +76,11 @@ pub fn exec_reply(
     CHILD_RELATIONSHIP.save(deps.storage, (parent_id, child_id), &true)?;
 
     // Add to ranked reply relationship
-    POS_REPLY_RELATIONSHIP.save(deps.storage, (parent_id, 0, child_id), &true)?;
+    UP_REPLY_RELATIONSHIP.save(deps.storage, (parent_id, 0, child_id), &true)?;
 
-    process_tags_and_handles(deps.storage, child_id, tags, handles, false)?;
+    process_tags_and_mentions(deps.storage, child_id, tags, mentions, false)?;
+
+    // TODO: Prepare data for updating the thread's table if applicable
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "reply"),

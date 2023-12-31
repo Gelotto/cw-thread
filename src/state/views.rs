@@ -7,7 +7,7 @@ use cw_storage_plus::Bound;
 use crate::{error::ContractError, msg::Sentiment};
 
 use super::{
-    models::{Attachment, NodeMetadata, NEUTRAL},
+    models::{Attachment, NodeMetadata, NIL},
     storage::{
         NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
         NODE_ID_ADDR_2_SENTIMENT,
@@ -35,10 +35,8 @@ impl NodeView {
         account_addr: &Option<Addr>,
     ) -> Result<NodeView, ContractError> {
         let metadata = NODE_ID_2_METADATA.load(store, id)?;
-
         let body = NODE_ID_2_BODY.load(store, id)?;
         let title = NODE_ID_2_TITLE.may_load(store, id)?;
-
         let attachments = NODE_ID_2_ATTACHMENT
             .range(
                 store,
@@ -58,7 +56,7 @@ impl NodeView {
                 sentiment: Sentiment::from_u8(
                     NODE_ID_ADDR_2_SENTIMENT
                         .may_load(store, (id, addr))?
-                        .unwrap_or(NEUTRAL),
+                        .unwrap_or(NIL),
                 ),
             }),
         };

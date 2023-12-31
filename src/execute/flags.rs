@@ -43,6 +43,9 @@ pub fn exec_flag(
             })
         },
     )?;
+
+    // TODO: Prepare data for updating the thread's table if applicable
+
     Ok(Response::new().add_attributes(vec![attr("action", "flag")]))
 }
 

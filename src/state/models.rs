@@ -1,9 +1,15 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Timestamp};
 
-pub const NEGATIVE: u8 = 0;
-pub const POSITIVE: u8 = 1;
-pub const NEUTRAL: u8 = 2;
+pub const NIL: u8 = 0;
+pub const DOWN: u8 = 1;
+pub const UP: u8 = 2;
+
+/// Since rank can be negative or positive yet ints in CW must be unsigned, we
+/// use ZERO_RANK to represent 0, and anything less than this value is
+/// considered a negative rank. With this, we only need one map to store ranks,
+/// instead of one for each sentiment.
+pub const RANK_ZERO: u32 = u32::MAX >> 1;
 
 #[cw_serde]
 pub struct Config {

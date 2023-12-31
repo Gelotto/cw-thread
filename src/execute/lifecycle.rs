@@ -43,7 +43,7 @@ pub fn exec_setup(
     //     let mut indices = vec![
     //         KeyValue::Timestamp("created_at".into(), Some(profile.created_at)),
     //         KeyValue::String("created_by".into(), Some(info.sender.clone().into())),
-    //         KeyValue::String("handle".into(), Some(profile.handle.clone())),
+    //         KeyValue::String("mention".into(), Some(profile.mention.clone())),
     //     ];
 
     //     if let Some(email) = &profile.email {
@@ -70,7 +70,7 @@ pub fn exec_setup(
     //     let tags = TagUpdates {
     //         remove: None,
     //         add: Some(vec![TagUpdate {
-    //             text: format!("@{}", profile.handle.to_lowercase()),
+    //             text: format!("@{}", profile.mention.to_lowercase()),
     //             unique: Some(true),
     //         }]),
     //     };

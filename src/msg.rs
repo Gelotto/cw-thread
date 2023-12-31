@@ -4,23 +4,22 @@ use cw_lib::models::Owner;
 use cw_table::lifecycle::LifecycleExecuteMsg;
 
 use crate::state::{
-    models::{Attachment, Config, TableInfo, NEGATIVE, NEUTRAL, POSITIVE},
+    models::{Attachment, Config, TableInfo, DOWN, UP},
     views::NodeView,
 };
 
 #[cw_serde]
 pub enum Sentiment {
-    Positive,
-    Negative,
-    Neutral,
+    Up,
+    Down,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub body: String,
+    pub body: Option<String>,
     pub title: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub handles: Option<Vec<String>>,
+    pub mentions: Option<Vec<String>>,
     pub attachments: Option<Vec<Attachment>>,
     pub owner: Option<Owner>,
 }
@@ -29,7 +28,7 @@ pub struct InstantiateMsg {
 pub struct NodeReplyMsg {
     pub body: String,
     pub tags: Option<Vec<String>>,
-    pub handles: Option<Vec<String>>,
+    pub mentions: Option<Vec<String>>,
     pub parent_id: u32,
     pub attachments: Option<Vec<Attachment>>,
 }
@@ -41,7 +40,7 @@ pub struct NodeEditMsg {
     pub body: Option<String>,
     pub attachments: Option<Vec<Attachment>>,
     pub tags: Option<Vec<String>>,
-    pub handles: Option<Vec<String>>,
+    pub mentions: Option<Vec<String>>,
 }
 
 #[cw_serde]
@@ -52,20 +51,17 @@ pub struct NodeVoteMsg {
 
 impl Sentiment {
     pub fn from_u8(u8_sentiment: u8) -> Self {
-        if u8_sentiment == NEUTRAL {
-            Self::Neutral
-        } else if u8_sentiment == POSITIVE {
-            Self::Positive
+        if u8_sentiment == UP {
+            Self::Up
         } else {
-            Self::Negative
+            Self::Down
         }
     }
 
     pub fn to_u8(&self) -> u8 {
         match self {
-            Sentiment::Positive => POSITIVE,
-            Sentiment::Negative => NEGATIVE,
-            Sentiment::Neutral => NEUTRAL,
+            Sentiment::Up => UP,
+            Sentiment::Down => DOWN,
         }
     }
 }
@@ -76,6 +72,7 @@ pub enum ExecuteMsg {
     SetConfig(Config),
     Reply(NodeReplyMsg),
     Vote(NodeVoteMsg),
+    VoteMany(Vec<NodeVoteMsg>),
     Edit(NodeEditMsg),
     Delete { id: u32 },
     Flag { id: u32, reason: Option<String> },
@@ -104,8 +101,8 @@ pub enum NodesQueryMsg {
         cursor: Option<u32>,
         sender: Option<Addr>,
     },
-    WithHandle {
-        handle: String,
+    WithMention {
+        mention: String,
         cursor: Option<u32>,
         sender: Option<Addr>,
     },

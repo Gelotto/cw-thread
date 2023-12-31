@@ -7,10 +7,10 @@ use crate::{
     error::ContractError,
     msg::{NodeViewByTagPaginationResponse, NodeViewRepliesPaginationResponse},
     state::{
-        models::{NEGATIVE, POSITIVE},
+        models::{DOWN, UP},
         storage::{
-            HANDLE_NODE_RELATIONSHIP, NEG_REPLY_RELATIONSHIP, POS_REPLY_RELATIONSHIP,
-            TAG_NODE_RELATIONSHIP,
+            DOWN_REPLY_RELATIONSHIP, MENTION_NODE_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
+            UP_REPLY_RELATIONSHIP,
         },
         views::NodeView,
     },
@@ -23,7 +23,7 @@ pub const DEFAULT_PAGINATION_LIMIT: u8 = 25;
 
 pub enum TagWrapper {
     Tag(String),
-    Handle(String),
+    Mention(String),
 }
 
 pub fn query_nodes_by_id(
@@ -54,7 +54,7 @@ pub fn query_nodes_in_reply_to(
         .min(DEFAULT_PAGINATION_LIMIT as u16) as usize;
 
     // Starting point for resuming pagination using the cursor:
-    let mut cursor_sentiment = POSITIVE;
+    let mut cursor_sentiment = UP;
     let start = if let Some((sentiment, rank, child_id)) = cursor {
         cursor_sentiment = sentiment;
         Some(Bound::Exclusive(((parent_id, rank, child_id), PhantomData)))
@@ -65,28 +65,28 @@ pub fn query_nodes_in_reply_to(
     let mut replies: Vec<NodeView> = Vec::with_capacity(page_size);
     let mut cursor: Option<(u8, u32, u32)> = None;
 
-    if cursor_sentiment == POSITIVE {
-        for result in POS_REPLY_RELATIONSHIP
+    if cursor_sentiment == UP {
+        for result in UP_REPLY_RELATIONSHIP
             .keys(deps.storage, None, start.clone(), Order::Descending)
             .take(page_size)
         {
             let (_, rank, child_id) = result?;
             replies.push(NodeView::load(deps.storage, child_id, &sender)?);
             if replies.len() == page_size {
-                cursor = Some((POSITIVE, rank, child_id))
+                cursor = Some((UP, rank, child_id))
             }
         }
     }
 
     if replies.len() < DEFAULT_PAGINATION_LIMIT as usize {
-        for result in NEG_REPLY_RELATIONSHIP
+        for result in DOWN_REPLY_RELATIONSHIP
             .keys(deps.storage, None, start, Order::Descending)
             .take(DEFAULT_PAGINATION_LIMIT as usize - replies.len())
         {
             let (_, rank, child_id) = result?;
             replies.push(NodeView::load(deps.storage, child_id, &sender)?);
             if replies.len() == page_size {
-                cursor = Some((NEGATIVE, rank, child_id))
+                cursor = Some((DOWN, rank, child_id))
             }
         }
     }
@@ -123,7 +123,7 @@ pub fn query_ancestor_nodes(
     Ok(nodes)
 }
 
-pub fn query_nodes_by_tag_or_handle(
+pub fn query_nodes_by_tag_or_mention(
     ctx: ReadonlyContext,
     wrapped_tag: TagWrapper,
     cursor: Option<u32>,
@@ -138,7 +138,7 @@ pub fn query_nodes_by_tag_or_handle(
     };
     let (map, tag) = match wrapped_tag {
         TagWrapper::Tag(s) => (TAG_NODE_RELATIONSHIP, s.to_lowercase()),
-        TagWrapper::Handle(s) => (HANDLE_NODE_RELATIONSHIP, s.to_lowercase()),
+        TagWrapper::Mention(s) => (MENTION_NODE_RELATIONSHIP, s.to_lowercase()),
     };
 
     for result in map

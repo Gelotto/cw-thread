@@ -1,12 +1,12 @@
 use crate::{
     error::ContractError,
     state::{
-        models::POSITIVE,
+        models::UP,
         storage::{
-            CHILD_RELATIONSHIP, HANDLE_NODE_RELATIONSHIP, NEG_REPLY_RELATIONSHIP,
-            NODE_HANDLE_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_FLAG,
-            NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, POS_REPLY_RELATIONSHIP,
-            TAG_NODE_RELATIONSHIP,
+            CHILD_RELATIONSHIP, DOWN_REPLY_RELATIONSHIP, MENTION_NODE_RELATIONSHIP,
+            NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_FLAG, NODE_ID_2_METADATA,
+            NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
+            UP_REPLY_RELATIONSHIP,
         },
     },
     util::load_node_metadata,
@@ -21,6 +21,10 @@ pub fn exec_delete_node(
 ) -> Result<Response, ContractError> {
     let Context { deps, .. } = ctx;
     let node = load_node_metadata(deps.storage, id, true)?.unwrap();
+
+    // TODO: replace some of these global maps with node-specific ones that we
+    // can more simply call map.clear() on. The currenty method of iterating
+    // over everything is O(N) and waiting to break.
 
     // Remove metadata
     NODE_ID_2_METADATA.remove(deps.storage, id);
@@ -44,10 +48,10 @@ pub fn exec_delete_node(
         )?;
 
         // Remove from ranked reply ordering maps
-        if node.sentiment == POSITIVE {
-            POS_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
+        if node.sentiment == UP {
+            UP_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
         } else {
-            NEG_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
+            DOWN_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
         }
     }
 
@@ -83,7 +87,7 @@ pub fn exec_delete_node(
         NODE_ID_2_ATTACHMENT.remove(deps.storage, (id, i));
     }
 
-    // Remove handles
+    // Remove mentions
     {
         let map = TAG_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
@@ -95,7 +99,7 @@ pub fn exec_delete_node(
         }
     }
     {
-        let map = HANDLE_NODE_RELATIONSHIP;
+        let map = MENTION_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -104,13 +108,13 @@ pub fn exec_delete_node(
             map.remove(deps.storage, (a, *b));
         }
         for (a, b) in keys.iter() {
-            HANDLE_NODE_RELATIONSHIP.remove(deps.storage, (a, *b));
+            MENTION_NODE_RELATIONSHIP.remove(deps.storage, (a, *b));
         }
     }
 
     // Remove tags
     {
-        let map = NODE_HANDLE_RELATIONSHIP;
+        let map = NODE_MENTION_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -121,7 +125,7 @@ pub fn exec_delete_node(
         }
     }
     {
-        let map = HANDLE_NODE_RELATIONSHIP;
+        let map = MENTION_NODE_RELATIONSHIP;
         let keys: Vec<_> = map
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
@@ -131,6 +135,8 @@ pub fn exec_delete_node(
             map.remove(deps.storage, (a, *b));
         }
     }
+
+    // TODO: Prepare data for updating the thread's table if applicable
 
     Ok(Response::new().add_attributes(vec![attr("action", "delete")]))
 }

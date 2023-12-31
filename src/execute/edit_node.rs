@@ -2,7 +2,7 @@ use crate::{
     error::ContractError,
     msg::NodeEditMsg,
     state::storage::{NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_TITLE},
-    util::{load_node_metadata, process_tags_and_handles},
+    util::{load_node_metadata, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Order, Response};
 
@@ -16,7 +16,7 @@ pub fn exec_edit_node(
     let metadata = load_node_metadata(deps.storage, msg.id, true)?.unwrap();
 
     if let Some(new_body) = &msg.body {
-        process_tags_and_handles(deps.storage, msg.id, msg.tags, msg.handles, true)?;
+        process_tags_and_mentions(deps.storage, msg.id, msg.tags, msg.mentions, true)?;
         // TODO: validate new body
         NODE_ID_2_BODY.save(deps.storage, msg.id, new_body)?;
         if msg.title.is_some() {
@@ -48,6 +48,8 @@ pub fn exec_edit_node(
             NODE_ID_2_ATTACHMENT.save(deps.storage, (msg.id, i as u8), attachment)?;
         }
     }
+
+    // TODO: Prepare data for updating the thread's table if applicable
 
     Ok(Response::new().add_attributes(vec![attr("action", "edit")]))
 }

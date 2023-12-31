@@ -6,11 +6,11 @@ use cosmwasm_std::Response;
 use cw_lib::models::Owner;
 
 use crate::{
-    error::ContractError, execute::Context, msg::InstantiateMsg, util::process_tags_and_handles,
+    error::ContractError, execute::Context, msg::InstantiateMsg, util::process_tags_and_mentions,
 };
 
 use self::{
-    models::{Config, NodeMetadata, POSITIVE},
+    models::{Config, NodeMetadata, RANK_ZERO, UP},
     storage::{
         CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
         NODE_ID_COUNTER, OWNER,
@@ -39,7 +39,7 @@ pub fn init(
 
     NODE_ID_COUNTER.save(deps.storage, &u32::MAX)?;
 
-    NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body)?;
+    NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body.unwrap_or_default())?;
 
     if let Some(title) = msg.title {
         NODE_ID_2_TITLE.save(deps.storage, root_node_id, &title)?;
@@ -61,15 +61,15 @@ pub fn init(
             updated_at: None,
             created_by: info.sender.clone(),
             parent_id: None,
-            sentiment: POSITIVE,
+            sentiment: UP,
+            rank: RANK_ZERO,
             n_attachments,
             n_replies: 0,
-            rank: 0,
             n_flags: 0,
         },
     )?;
 
-    process_tags_and_handles(deps.storage, root_node_id, msg.tags, msg.handles, false)?;
+    process_tags_and_mentions(deps.storage, root_node_id, msg.tags, msg.mentions, false)?;
 
     Ok(Response::new().add_attribute("action", "instantiate"))
 }
