@@ -37,7 +37,7 @@ pub fn init(
             .unwrap_or_else(|| Owner::Address(info.sender.clone())),
     )?;
 
-    NODE_ID_COUNTER.save(deps.storage, &u32::MAX)?;
+    NODE_ID_COUNTER.save(deps.storage, &0)?;
 
     NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body.unwrap_or_default())?;
 

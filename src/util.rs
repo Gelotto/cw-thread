@@ -26,16 +26,7 @@ pub fn load_node_metadata(
 }
 
 pub fn next_node_id(store: &mut dyn Storage) -> Result<u32, ContractError> {
-    Ok(
-        NODE_ID_COUNTER.update(store, |n| -> Result<_, ContractError> {
-            if n == 1 {
-                return Err(ContractError::NotAuthorized {
-                    reason: "No more nodes allowed in thread".to_owned(),
-                });
-            }
-            Ok(n - 1)
-        })?,
-    )
+    Ok(NODE_ID_COUNTER.update(store, |n| -> Result<_, ContractError> { Ok(n + 1) })?)
 }
 
 pub fn process_tags_and_mentions(

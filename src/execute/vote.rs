@@ -3,7 +3,7 @@ use crate::{
     msg::NodeVoteMsg,
     state::{
         models::{DOWN, NIL, UP},
-        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILD_RELATIONSHIP},
+        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILDREN},
     },
 };
 use cosmwasm_std::{attr, Response, Storage};
@@ -58,12 +58,8 @@ pub fn exec_votes(
 
         // Update ranking of voted node WRT its parent node
         if let Some(parent_id) = maybe_parent_id {
-            RANKED_CHILD_RELATIONSHIP.remove(deps.storage, (parent_id, prev_rank, child_id));
-            RANKED_CHILD_RELATIONSHIP.save(
-                deps.storage,
-                (parent_id, curr_rank, child_id),
-                &true,
-            )?;
+            RANKED_CHILDREN.remove(deps.storage, (parent_id, prev_rank, child_id));
+            RANKED_CHILDREN.save(deps.storage, (parent_id, curr_rank, child_id), &true)?;
         }
 
         // TODO: Prepare data for updating the thread's table if applicable

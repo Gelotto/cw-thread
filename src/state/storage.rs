@@ -16,7 +16,7 @@ pub const NODE_ID_2_ATTACHMENT: Map<(u32, u8), Attachment> = Map::new("node_id_2
 pub const NODE_ID_2_FLAG: Map<(u32, &Addr), FlagMetadata> = Map::new("node_id_2_flag");
 pub const NODE_ID_ADDR_2_SENTIMENT: Map<(u32, &Addr), u8> = Map::new("node_id_addr_2_sentiment");
 
-pub const RANKED_CHILD_RELATIONSHIP: Map<(u32, i32, u32), bool> = Map::new("ranked_child_rel");
+pub const RANKED_CHILDREN: Map<(u32, i32, u32), bool> = Map::new("ranked_child");
 pub const CHILD_RELATIONSHIP: Map<(u32, u32), bool> = Map::new("child_rel");
 
 pub const MENTION_NODE_RELATIONSHIP: Map<(&String, u32), bool> = Map::new("mention_rel");

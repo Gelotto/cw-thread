@@ -7,7 +7,7 @@ use crate::{
     error::ContractError,
     msg::{NodeViewByTagPaginationResponse, NodeViewRepliesPaginationResponse},
     state::{
-        storage::{MENTION_NODE_RELATIONSHIP, RANKED_CHILD_RELATIONSHIP, TAG_NODE_RELATIONSHIP},
+        storage::{MENTION_NODE_RELATIONSHIP, RANKED_CHILDREN, TAG_NODE_RELATIONSHIP},
         views::NodeView,
     },
     util::load_node_metadata,
@@ -52,14 +52,22 @@ pub fn query_nodes_in_reply_to(
     let start = if let Some(cursor) = cursor {
         Some(Bound::Exclusive((cursor, PhantomData)))
     } else {
-        None
+        Some(Bound::Inclusive((
+            (parent_id, i32::MAX, u32::MAX),
+            PhantomData,
+        )))
     };
+
+    let stop = Some(Bound::Exclusive((
+        (parent_id, i32::MIN, u32::MIN),
+        PhantomData,
+    )));
 
     let mut replies: Vec<NodeView> = Vec::with_capacity(page_size);
     let mut cursor: Option<(u32, i32, u32)> = None;
 
-    for result in RANKED_CHILD_RELATIONSHIP
-        .keys(deps.storage, None, start.clone(), Order::Descending)
+    for result in RANKED_CHILDREN
+        .keys(deps.storage, stop, start.clone(), Order::Descending)
         .take(page_size)
     {
         let (parent_id, rank, child_id) = result?;

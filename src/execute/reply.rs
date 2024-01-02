@@ -5,7 +5,7 @@ use crate::{
         models::{NodeMetadata, UP},
         storage::{
             CHILD_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA,
-            RANKED_CHILD_RELATIONSHIP,
+            RANKED_CHILDREN,
         },
     },
     util::{next_node_id, process_tags_and_mentions},
@@ -76,7 +76,7 @@ pub fn exec_reply(
     CHILD_RELATIONSHIP.save(deps.storage, (parent_id, child_id), &true)?;
 
     // Add to ranked reply relationship
-    RANKED_CHILD_RELATIONSHIP.save(deps.storage, (parent_id, 0, child_id), &true)?;
+    RANKED_CHILDREN.save(deps.storage, (parent_id, 0, child_id), &true)?;
 
     process_tags_and_mentions(deps.storage, child_id, tags, mentions, false)?;
 
