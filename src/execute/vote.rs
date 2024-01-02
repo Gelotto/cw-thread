@@ -2,8 +2,8 @@ use crate::{
     error::ContractError,
     msg::NodeVoteMsg,
     state::{
-        models::{DOWN, NIL, RANK_ZERO, UP},
-        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANK_RELATIONSHIP},
+        models::{DOWN, NIL, UP},
+        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILD_RELATIONSHIP},
     },
 };
 use cosmwasm_std::{attr, Response, Storage};
@@ -58,8 +58,12 @@ pub fn exec_votes(
 
         // Update ranking of voted node WRT its parent node
         if let Some(parent_id) = maybe_parent_id {
-            RANK_RELATIONSHIP.remove(deps.storage, (parent_id, prev_rank, child_id));
-            RANK_RELATIONSHIP.save(deps.storage, (parent_id, curr_rank, child_id), &true)?;
+            RANKED_CHILD_RELATIONSHIP.remove(deps.storage, (parent_id, prev_rank, child_id));
+            RANKED_CHILD_RELATIONSHIP.save(
+                deps.storage,
+                (parent_id, curr_rank, child_id),
+                &true,
+            )?;
         }
 
         // TODO: Prepare data for updating the thread's table if applicable
@@ -73,10 +77,10 @@ pub fn update_node_rank(
     node_id: u32,
     prev_user_sentiment: u8,
     curr_user_sentiment: u8,
-) -> Result<(Option<u32>, u32, u32), ContractError> {
+) -> Result<(Option<u32>, i32, i32), ContractError> {
     let mut parent_id: Option<u32> = None;
-    let mut prev_rank = RANK_ZERO;
-    let mut curr_rank = RANK_ZERO;
+    let mut prev_rank = 0;
+    let mut curr_rank = 0;
 
     NODE_ID_2_METADATA.update(
         store,
@@ -94,13 +98,14 @@ pub fn update_node_rank(
                     }
                 } else {
                     // Set or update vote
+                    let delta = if prev_user_sentiment == NIL { 1 } else { 2 };
                     if curr_user_sentiment == UP {
-                        meta.rank += 1;
+                        meta.rank += delta;
                     } else {
-                        meta.rank -= 1;
+                        meta.rank -= delta;
                     }
                 }
-                meta.sentiment = if curr_rank >= RANK_ZERO { UP } else { DOWN };
+                meta.sentiment = if curr_rank >= 0 { UP } else { DOWN };
                 curr_rank = meta.rank;
                 Ok(meta)
             } else {

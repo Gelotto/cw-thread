@@ -10,7 +10,7 @@ use crate::{
 };
 
 use self::{
-    models::{Config, NodeMetadata, RANK_ZERO, UP},
+    models::{Config, NodeMetadata, UP},
     storage::{
         CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
         NODE_ID_COUNTER, OWNER,
@@ -62,7 +62,7 @@ pub fn init(
             created_by: info.sender.clone(),
             parent_id: None,
             sentiment: UP,
-            rank: RANK_ZERO,
+            rank: 0,
             n_attachments,
             n_replies: 0,
             n_flags: 0,

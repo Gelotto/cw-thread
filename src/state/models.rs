@@ -5,12 +5,6 @@ pub const NIL: u8 = 0;
 pub const DOWN: u8 = 1;
 pub const UP: u8 = 2;
 
-/// Since rank can be negative or positive yet ints in CW must be unsigned, we
-/// use ZERO_RANK to represent 0, and anything less than this value is
-/// considered a negative rank. With this, we only need one map to store ranks,
-/// instead of one for each sentiment.
-pub const RANK_ZERO: u32 = u32::MAX >> 1;
-
 #[cw_serde]
 pub struct Config {
     // TODO: make readonly if is_archived
@@ -48,7 +42,7 @@ pub struct NodeMetadata {
     pub updated_at: Option<Timestamp>,
     pub created_by: Addr,
     pub sentiment: u8,
-    pub rank: u32,
+    pub rank: i32,
     pub n_replies: u16,
     pub n_attachments: u8,
     pub n_flags: u8,

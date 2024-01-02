@@ -87,7 +87,7 @@ pub enum NodesQueryMsg {
     },
     InReplyTo {
         id: u32,
-        cursor: Option<(u8, u32, u32)>,
+        cursor: Option<(u32, i32, u32)>,
         sender: Option<Addr>,
         limit: Option<u8>,
     },
@@ -131,7 +131,7 @@ pub struct ThreadInfoResponse {
 #[cw_serde]
 pub struct NodeViewRepliesPaginationResponse {
     pub nodes: Vec<NodeView>,
-    pub cursor: Option<(u8, u32, u32)>,
+    pub cursor: Option<(u32, i32, u32)>,
 }
 
 #[cw_serde]

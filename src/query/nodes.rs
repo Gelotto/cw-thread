@@ -7,11 +7,7 @@ use crate::{
     error::ContractError,
     msg::{NodeViewByTagPaginationResponse, NodeViewRepliesPaginationResponse},
     state::{
-        models::{DOWN, UP},
-        storage::{
-            DOWN_REPLY_RELATIONSHIP, MENTION_NODE_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
-            UP_REPLY_RELATIONSHIP,
-        },
+        storage::{MENTION_NODE_RELATIONSHIP, RANKED_CHILD_RELATIONSHIP, TAG_NODE_RELATIONSHIP},
         views::NodeView,
     },
     util::load_node_metadata,
@@ -42,7 +38,7 @@ pub fn query_nodes_by_id(
 pub fn query_nodes_in_reply_to(
     ctx: ReadonlyContext,
     parent_id: u32,
-    cursor: Option<(u8, u32, u32)>,
+    cursor: Option<(u32, i32, u32)>,
     limit: Option<u8>,
     sender: Option<Addr>,
 ) -> Result<NodeViewRepliesPaginationResponse, ContractError> {
@@ -53,41 +49,23 @@ pub fn query_nodes_in_reply_to(
         .min(limit.unwrap_or(DEFAULT_PAGINATION_LIMIT) as u16)
         .min(DEFAULT_PAGINATION_LIMIT as u16) as usize;
 
-    // Starting point for resuming pagination using the cursor:
-    let mut cursor_sentiment = UP;
-    let start = if let Some((sentiment, rank, child_id)) = cursor {
-        cursor_sentiment = sentiment;
-        Some(Bound::Exclusive(((parent_id, rank, child_id), PhantomData)))
+    let start = if let Some(cursor) = cursor {
+        Some(Bound::Exclusive((cursor, PhantomData)))
     } else {
         None
     };
 
     let mut replies: Vec<NodeView> = Vec::with_capacity(page_size);
-    let mut cursor: Option<(u8, u32, u32)> = None;
+    let mut cursor: Option<(u32, i32, u32)> = None;
 
-    if cursor_sentiment == UP {
-        for result in UP_REPLY_RELATIONSHIP
-            .keys(deps.storage, None, start.clone(), Order::Descending)
-            .take(page_size)
-        {
-            let (_, rank, child_id) = result?;
-            replies.push(NodeView::load(deps.storage, child_id, &sender)?);
-            if replies.len() == page_size {
-                cursor = Some((UP, rank, child_id))
-            }
-        }
-    }
-
-    if replies.len() < DEFAULT_PAGINATION_LIMIT as usize {
-        for result in DOWN_REPLY_RELATIONSHIP
-            .keys(deps.storage, None, start, Order::Descending)
-            .take(DEFAULT_PAGINATION_LIMIT as usize - replies.len())
-        {
-            let (_, rank, child_id) = result?;
-            replies.push(NodeView::load(deps.storage, child_id, &sender)?);
-            if replies.len() == page_size {
-                cursor = Some((DOWN, rank, child_id))
-            }
+    for result in RANKED_CHILD_RELATIONSHIP
+        .keys(deps.storage, None, start.clone(), Order::Descending)
+        .take(page_size)
+    {
+        let (parent_id, rank, child_id) = result?;
+        replies.push(NodeView::load(deps.storage, child_id, &sender)?);
+        if replies.len() == page_size {
+            cursor = Some((parent_id, rank, child_id))
         }
     }
 

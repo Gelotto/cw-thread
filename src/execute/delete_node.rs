@@ -1,13 +1,9 @@
 use crate::{
     error::ContractError,
-    state::{
-        models::UP,
-        storage::{
-            CHILD_RELATIONSHIP, DOWN_REPLY_RELATIONSHIP, MENTION_NODE_RELATIONSHIP,
-            NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_FLAG, NODE_ID_2_METADATA,
-            NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
-            UP_REPLY_RELATIONSHIP,
-        },
+    state::storage::{
+        CHILD_RELATIONSHIP, MENTION_NODE_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY,
+        NODE_ID_2_FLAG, NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP,
+        RANKED_CHILD_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
     },
     util::load_node_metadata,
 };
@@ -32,7 +28,8 @@ pub fn exec_delete_node(
     if let Some(parent_id) = node.parent_id {
         // Remove child relationship
         CHILD_RELATIONSHIP.remove(deps.storage, (parent_id, id));
-
+        // Remove from ranked reply ordering map
+        RANKED_CHILD_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
         // Update parent metadata
         NODE_ID_2_METADATA.update(
             deps.storage,
@@ -46,13 +43,6 @@ pub fn exec_delete_node(
                 }
             },
         )?;
-
-        // Remove from ranked reply ordering maps
-        if node.sentiment == UP {
-            UP_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
-        } else {
-            DOWN_REPLY_RELATIONSHIP.remove(deps.storage, (parent_id, node.rank, id));
-        }
     }
 
     // Purge the node's sentiment state
