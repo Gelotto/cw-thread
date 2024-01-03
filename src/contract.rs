@@ -10,8 +10,8 @@ use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, NodesQueryMsg, QueryMsg};
 use crate::query::info::query_thread_info;
 use crate::query::nodes::{
-    query_ancestor_nodes, query_nodes_by_id, query_nodes_by_tag_or_mention,
-    query_nodes_in_reply_to, TagWrapper,
+    query_ancestor_nodes, query_child_nodes, query_nodes_by_id, query_nodes_by_tag_or_mention,
+    TagWrapper,
 };
 use crate::query::ReadonlyContext;
 use crate::state;
@@ -73,12 +73,12 @@ pub fn query(
             NodesQueryMsg::ByIds { ids, sender } => {
                 to_json_binary(&query_nodes_by_id(ctx, ids, sender)?)
             },
-            NodesQueryMsg::InReplyTo {
+            NodesQueryMsg::Children {
                 id,
                 cursor,
                 limit,
                 sender,
-            } => to_json_binary(&query_nodes_in_reply_to(ctx, id, cursor, limit, sender)?),
+            } => to_json_binary(&query_child_nodes(ctx, id, cursor, limit, sender)?),
             NodesQueryMsg::WithTag {
                 tag,
                 cursor,
@@ -99,7 +99,7 @@ pub fn query(
                 cursor,
                 sender,
             )?),
-            NodesQueryMsg::AncestorsOf { id, levels, sender } => {
+            NodesQueryMsg::Ancestors { id, levels, sender } => {
                 to_json_binary(&query_ancestor_nodes(ctx, id, levels, sender)?)
             },
         },

@@ -35,7 +35,7 @@ pub fn query_nodes_by_id(
     Ok(nodes)
 }
 
-pub fn query_nodes_in_reply_to(
+pub fn query_child_nodes(
     ctx: ReadonlyContext,
     parent_id: u32,
     cursor: Option<(u32, i32, u32)>,

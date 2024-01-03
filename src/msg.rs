@@ -85,13 +85,13 @@ pub enum NodesQueryMsg {
         ids: Vec<u32>,
         sender: Option<Addr>,
     },
-    InReplyTo {
+    Children {
         id: u32,
         cursor: Option<(u32, i32, u32)>,
         sender: Option<Addr>,
         limit: Option<u8>,
     },
-    AncestorsOf {
+    Ancestors {
         id: u32,
         levels: Option<u8>,
         sender: Option<Addr>,
