@@ -10,7 +10,7 @@ use super::{
     models::{Attachment, NodeMetadata, NIL},
     storage::{
         NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
-        NODE_ID_ADDR_2_SENTIMENT,
+        NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP, NODE_TAG_RELATIONSHIP,
     },
 };
 
@@ -69,4 +69,26 @@ impl NodeView {
             account,
         })
     }
+}
+
+pub fn load_tags(
+    store: &dyn Storage,
+    node_id: u32,
+) -> Result<Vec<String>, ContractError> {
+    Ok(NODE_TAG_RELATIONSHIP
+        .prefix(node_id)
+        .keys(store, None, None, Order::Ascending)
+        .map(|k| k.unwrap())
+        .collect())
+}
+
+pub fn load_mentions(
+    store: &dyn Storage,
+    node_id: u32,
+) -> Result<Vec<String>, ContractError> {
+    Ok(NODE_MENTION_RELATIONSHIP
+        .prefix(node_id)
+        .keys(store, None, None, Order::Ascending)
+        .map(|k| k.unwrap())
+        .collect())
 }

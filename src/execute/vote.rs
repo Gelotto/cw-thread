@@ -2,7 +2,7 @@ use crate::{
     error::ContractError,
     msg::NodeVoteMsg,
     state::{
-        models::{DOWN, NIL, UP},
+        models::{NIL, UP},
         storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILDREN},
     },
 };
@@ -101,7 +101,6 @@ pub fn update_node_rank(
                         meta.rank -= delta;
                     }
                 }
-                meta.sentiment = if curr_rank >= 0 { UP } else { DOWN };
                 curr_rank = meta.rank;
                 Ok(meta)
             } else {

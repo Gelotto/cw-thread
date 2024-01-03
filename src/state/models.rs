@@ -5,6 +5,8 @@ pub const NIL: u8 = 0;
 pub const DOWN: u8 = 1;
 pub const UP: u8 = 2;
 
+pub const ROOT_ID: u32 = 0;
+
 #[cw_serde]
 pub struct Config {
     // TODO: make readonly if is_archived
@@ -41,7 +43,6 @@ pub struct NodeMetadata {
     pub created_at: Timestamp,
     pub updated_at: Option<Timestamp>,
     pub created_by: Addr,
-    pub sentiment: u8,
     pub rank: i32,
     pub n_replies: u16,
     pub n_attachments: u8,

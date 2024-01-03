@@ -10,7 +10,7 @@ use crate::{
 };
 
 use self::{
-    models::{Config, NodeMetadata, UP},
+    models::{Config, NodeMetadata, ROOT_ID},
     storage::{
         CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
         NODE_ID_COUNTER, OWNER,
@@ -23,7 +23,6 @@ pub fn init(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let Context { deps, info, env } = ctx;
-    let root_node_id: u32 = 0;
 
     if let Some(owner) = &msg.owner {
         deps.api.addr_validate(owner.to_addr().as_str())?;
@@ -37,31 +36,30 @@ pub fn init(
             .unwrap_or_else(|| Owner::Address(info.sender.clone())),
     )?;
 
-    NODE_ID_COUNTER.save(deps.storage, &0)?;
+    NODE_ID_COUNTER.save(deps.storage, &ROOT_ID)?;
 
-    NODE_ID_2_BODY.save(deps.storage, root_node_id, &msg.body.unwrap_or_default())?;
+    NODE_ID_2_BODY.save(deps.storage, ROOT_ID, &msg.body.unwrap_or_default())?;
 
     if let Some(title) = msg.title {
-        NODE_ID_2_TITLE.save(deps.storage, root_node_id, &title)?;
+        NODE_ID_2_TITLE.save(deps.storage, ROOT_ID, &title)?;
     }
 
     // Save attachments
     let mut n_attachments: u8 = 0;
     for (i, attachment) in msg.attachments.unwrap_or_default().iter().enumerate() {
-        NODE_ID_2_ATTACHMENT.save(deps.storage, (root_node_id, i as u8), &attachment)?;
+        NODE_ID_2_ATTACHMENT.save(deps.storage, (ROOT_ID, i as u8), &attachment)?;
         n_attachments += 1;
     }
 
     NODE_ID_2_METADATA.save(
         deps.storage,
-        root_node_id,
+        ROOT_ID,
         &NodeMetadata {
-            id: root_node_id,
+            id: ROOT_ID,
             created_at: env.block.time,
             updated_at: None,
             created_by: info.sender.clone(),
             parent_id: None,
-            sentiment: UP,
             rank: 0,
             n_attachments,
             n_replies: 0,
@@ -69,7 +67,7 @@ pub fn init(
         },
     )?;
 
-    process_tags_and_mentions(deps.storage, root_node_id, msg.tags, msg.mentions, false)?;
+    process_tags_and_mentions(deps.storage, ROOT_ID, msg.tags, msg.mentions, false)?;
 
     Ok(Response::new().add_attribute("action", "instantiate"))
 }

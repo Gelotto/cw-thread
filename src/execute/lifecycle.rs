@@ -1,92 +1,109 @@
 use crate::{
     error::ContractError,
-    state::{models::TableInfo, storage::TABLE},
+    state::{
+        models::{TableInfo, ROOT_ID},
+        storage::TABLE,
+        views::{load_mentions, load_tags},
+    },
+    util::load_node_metadata,
 };
-use cosmwasm_std::{attr, Response};
-use cw_table::lifecycle::{LifecycleArgs, LifecycleSetupArgs};
+use cosmwasm_std::{attr, Addr, Response, Storage};
+use cw_table::{
+    client::Table,
+    lifecycle::{LifecycleArgs, LifecycleSetupArgs},
+    msg::{KeyValue, Relationship, RelationshipUpdates, TagUpdate, TagUpdates},
+};
 
 use super::Context;
 
-pub fn exec_setup(
-    ctx: Context,
-    args: LifecycleSetupArgs,
-) -> Result<Response, ContractError> {
-    let Context { deps, info, .. } = ctx;
-    let resp = Response::new().add_attributes(vec![attr("action", "setup")]);
-
-    if TABLE.exists(deps.storage) {
+fn save_table_info(
+    store: &mut dyn Storage,
+    table_addr: &Addr,
+    contract_id: &String,
+) -> Result<(), ContractError> {
+    if TABLE.exists(store) {
         return Err(ContractError::NotAuthorized {
             reason: "Already setup".to_owned(),
         });
     }
 
     TABLE.save(
-        deps.storage,
+        store,
         &TableInfo {
-            address: info.sender.clone(),
-            id: args.id.clone(),
+            address: table_addr.clone(),
+            id: contract_id.clone(),
         },
     )?;
 
-    // // Initialize user contract's data in parent table
-    // if let Some(table_addr) = TABLE.load(deps.storage)? {
-    //     if args.table != table_addr {
-    //         return Err(ContractError::NotAuthorized {
-    //             reason: "LifecycleMsg table not authorized".to_owned(),
-    //         });
-    //     }
+    Ok(())
+}
 
-    //     let table = Table::new(&table_addr, &env.contract.address);
-    //     let owners = OWNERS.load(deps.storage)?;
-    //     let profile = PROFILE.load(deps.storage)?;
+pub fn prepare_tag_updates(
+    store: &dyn Storage,
+    node_id: u32,
+) -> Result<TagUpdates, ContractError> {
+    let mut tag_updates_to_add: Vec<TagUpdate> = load_mentions(store, node_id)?
+        .iter()
+        .map(|text| TagUpdate {
+            text: text.clone(),
+            unique: None,
+        })
+        .collect();
 
-    //     let mut indices = vec![
-    //         KeyValue::Timestamp("created_at".into(), Some(profile.created_at)),
-    //         KeyValue::String("created_by".into(), Some(info.sender.clone().into())),
-    //         KeyValue::String("mention".into(), Some(profile.mention.clone())),
-    //     ];
+    tag_updates_to_add.append(
+        &mut load_tags(store, node_id)?
+            .iter()
+            .map(|text| TagUpdate {
+                text: text.clone(),
+                unique: None,
+            })
+            .collect(),
+    );
 
-    //     if let Some(email) = &profile.email {
-    //         indices.push(KeyValue::String("email".into(), Some(email.clone())));
-    //     }
+    Ok(TagUpdates {
+        remove: None,
+        add: Some(tag_updates_to_add),
+    })
+}
 
-    //     let mut relationships: Vec<Relationship> = owners
-    //         .iter()
-    //         .map(|addr| Relationship {
-    //             address: addr.clone(),
-    //             name: "owner".to_owned(),
-    //             unique: true,
-    //         })
-    //         .collect();
+pub fn exec_setup(
+    ctx: Context,
+    args: LifecycleSetupArgs,
+) -> Result<Response, ContractError> {
+    let Context {
+        deps, env, info, ..
+    } = ctx;
+    let resp = Response::new().add_attributes(vec![attr("action", "setup")]);
+    let meta = load_node_metadata(deps.storage, ROOT_ID, true)?.unwrap();
 
-    //     if let Some(referrer) = REFERRER.may_load(deps.storage)? {
-    //         relationships.push(Relationship {
-    //             name: "referrer".into(),
-    //             address: referrer,
-    //             unique: false,
-    //         });
-    //     }
+    save_table_info(deps.storage, &info.sender, &args.id)?;
 
-    //     let tags = TagUpdates {
-    //         remove: None,
-    //         add: Some(vec![TagUpdate {
-    //             text: format!("@{}", profile.mention.to_lowercase()),
-    //             unique: Some(true),
-    //         }]),
-    //     };
+    let indices = vec![
+        KeyValue::Int32("rank".into(), Some(meta.rank)), // TODO: implement in table
+        KeyValue::String("created_by".into(), Some(meta.created_by.clone().into())),
+        KeyValue::Uint16("n_replies".into(), Some(meta.n_replies)),
+    ];
 
-    //     resp = resp.add_message(table.update(
-    //         &info.sender,
-    //         Some(indices),
-    //         Some(tags),
-    //         Some(RelationshipUpdates {
-    //             remove: None,
-    //             add: Some(relationships),
-    //         }),
-    //     )?);
-    // }
+    let relationships_to_add: Vec<Relationship> = vec![Relationship {
+        address: meta.created_by.clone(),
+        name: "creator".to_owned(),
+        unique: false,
+    }];
 
-    Ok(resp)
+    let relationshps = RelationshipUpdates {
+        remove: None,
+        add: Some(relationships_to_add),
+    };
+
+    let tags = prepare_tag_updates(deps.storage, ROOT_ID)?;
+    let table = Table::new(&info.sender, &env.contract.address);
+
+    Ok(resp.add_message(table.update(
+        &info.sender,
+        Some(indices),
+        Some(tags),
+        Some(relationshps),
+    )?))
 }
 
 pub fn exec_teardown(

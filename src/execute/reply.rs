@@ -2,15 +2,16 @@ use crate::{
     error::ContractError,
     msg::NodeReplyMsg,
     state::{
-        models::{NodeMetadata, UP},
+        models::{NodeMetadata, TableInfo},
         storage::{
             CHILD_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA,
-            RANKED_CHILDREN,
+            RANKED_CHILDREN, TABLE,
         },
     },
     util::{next_node_id, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Response};
+use cw_table::client::Table;
 
 use super::Context;
 
@@ -63,7 +64,6 @@ pub fn exec_reply(
         updated_at: None,
         created_by: info.sender.clone(),
         parent_id: Some(parent_id),
-        sentiment: UP,
         n_attachments,
         n_replies: 0,
         rank: 0,
@@ -80,11 +80,17 @@ pub fn exec_reply(
 
     process_tags_and_mentions(deps.storage, child_id, tags, mentions, false)?;
 
-    // TODO: Prepare data for updating the thread's table if applicable
-
-    Ok(Response::new().add_attributes(vec![
+    let mut resp = Response::new().add_attributes(vec![
         attr("action", "reply"),
         attr("parent_id", parent_id.to_string()),
         attr("reply_id", child_id.to_string()),
-    ]))
+    ]);
+
+    // TODO: Prepare data for updating the thread's table if applicable
+    if let Some(TableInfo { address, .. }) = TABLE.may_load(deps.storage)? {
+        let table = Table::new(&address, &env.contract.address);
+        resp = resp.add_message(table.update(&info.sender, None, None, None)?);
+    }
+
+    Ok(resp)
 }
