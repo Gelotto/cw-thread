@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     state::{
-        models::{TableInfo, ROOT_ID},
+        models::{TableMetadata, ROOT_ID},
         storage::TABLE,
         views::{load_mentions, load_tags},
     },
@@ -29,7 +29,7 @@ fn save_table_info(
 
     TABLE.save(
         store,
-        &TableInfo {
+        &TableMetadata {
             address: table_addr.clone(),
             id: contract_id.clone(),
         },

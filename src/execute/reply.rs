@@ -2,9 +2,9 @@ use crate::{
     error::ContractError,
     msg::NodeReplyMsg,
     state::{
-        models::{NodeMetadata, TableInfo},
+        models::{NodeMetadata, TableMetadata},
         storage::{
-            CHILD_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA,
+            CHILD_RELATIONSHIP, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION,
             RANKED_CHILDREN, TABLE,
         },
     },
@@ -23,7 +23,7 @@ pub fn exec_reply(
     let NodeReplyMsg {
         body,
         parent_id,
-        attachments,
+        sections,
         mentions,
         tags,
     } = msg;
@@ -50,11 +50,11 @@ pub fn exec_reply(
     // Save the reply's main html body
     NODE_ID_2_BODY.save(deps.storage, child_id, &body)?;
 
-    // Save attachments
-    let mut n_attachments: u8 = 0;
-    for (i, attachment) in attachments.unwrap_or_default().iter().enumerate() {
-        NODE_ID_2_ATTACHMENT.save(deps.storage, (child_id, i as u8), &attachment)?;
-        n_attachments += 1;
+    // Save sections
+    let mut n_sections: u8 = 0;
+    for (i, section) in sections.unwrap_or_default().iter().enumerate() {
+        NODE_ID_2_SECTION.save(deps.storage, (child_id, i as u8), &section)?;
+        n_sections += 1;
     }
 
     // Build and save the reply node's metadata
@@ -64,7 +64,7 @@ pub fn exec_reply(
         updated_at: None,
         created_by: info.sender.clone(),
         parent_id: Some(parent_id),
-        n_attachments,
+        n_sections,
         n_replies: 0,
         rank: 0,
         n_flags: 0,
@@ -87,7 +87,7 @@ pub fn exec_reply(
     ]);
 
     // TODO: Prepare data for updating the thread's table if applicable
-    if let Some(TableInfo { address, .. }) = TABLE.may_load(deps.storage)? {
+    if let Some(TableMetadata { address, .. }) = TABLE.may_load(deps.storage)? {
         let table = Table::new(&address, &env.contract.address);
         resp = resp.add_message(table.update(&info.sender, None, None, None)?);
     }

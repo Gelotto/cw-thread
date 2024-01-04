@@ -7,9 +7,9 @@ use cw_storage_plus::Bound;
 use crate::{error::ContractError, msg::Sentiment};
 
 use super::{
-    models::{Attachment, NodeMetadata, NIL},
+    models::{NodeMetadata, Section, NIL},
     storage::{
-        NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
+        NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE,
         NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP, NODE_TAG_RELATIONSHIP,
     },
 };
@@ -24,7 +24,7 @@ pub struct NodeView {
     pub metadata: NodeMetadata,
     pub title: Option<String>,
     pub body: String,
-    pub attachments: Vec<Attachment>,
+    pub sections: Vec<Section>,
     pub account: Option<NodeAccountView>,
 }
 
@@ -37,7 +37,7 @@ impl NodeView {
         let metadata = NODE_ID_2_METADATA.load(store, id)?;
         let body = NODE_ID_2_BODY.load(store, id)?;
         let title = NODE_ID_2_TITLE.may_load(store, id)?;
-        let attachments = NODE_ID_2_ATTACHMENT
+        let sections = NODE_ID_2_SECTION
             .range(
                 store,
                 Some(Bound::Inclusive(((id, u8::MIN), PhantomData))),
@@ -48,7 +48,7 @@ impl NodeView {
                 let (_k, v) = r.unwrap();
                 v
             })
-            .collect::<Vec<Attachment>>();
+            .collect::<Vec<Section>>();
 
         let account = match account_addr {
             None => None,
@@ -65,7 +65,7 @@ impl NodeView {
             metadata,
             title,
             body,
-            attachments,
+            sections,
             account,
         })
     }

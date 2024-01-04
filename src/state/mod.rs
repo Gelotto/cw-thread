@@ -12,7 +12,7 @@ use crate::{
 use self::{
     models::{Config, NodeMetadata, ROOT_ID},
     storage::{
-        CONFIG, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_TITLE,
+        CONFIG, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE,
         NODE_ID_COUNTER, OWNER,
     },
 };
@@ -44,11 +44,11 @@ pub fn init(
         NODE_ID_2_TITLE.save(deps.storage, ROOT_ID, &title)?;
     }
 
-    // Save attachments
-    let mut n_attachments: u8 = 0;
-    for (i, attachment) in msg.attachments.unwrap_or_default().iter().enumerate() {
-        NODE_ID_2_ATTACHMENT.save(deps.storage, (ROOT_ID, i as u8), &attachment)?;
-        n_attachments += 1;
+    // Save sections
+    let mut n_sections: u8 = 0;
+    for (i, section) in msg.sections.unwrap_or_default().iter().enumerate() {
+        NODE_ID_2_SECTION.save(deps.storage, (ROOT_ID, i as u8), &section)?;
+        n_sections += 1;
     }
 
     NODE_ID_2_METADATA.save(
@@ -61,7 +61,7 @@ pub fn init(
             created_by: info.sender.clone(),
             parent_id: None,
             rank: 0,
-            n_attachments,
+            n_sections,
             n_replies: 0,
             n_flags: 0,
         },

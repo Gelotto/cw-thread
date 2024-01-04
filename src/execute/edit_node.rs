@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     msg::NodeEditMsg,
-    state::storage::{NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY, NODE_ID_2_TITLE},
+    state::storage::{NODE_ID_2_BODY, NODE_ID_2_SECTION, NODE_ID_2_TITLE},
     util::{load_node_metadata, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Order, Response};
@@ -32,20 +32,20 @@ pub fn exec_edit_node(
         }
     }
 
-    if let Some(new_attachments) = &msg.attachments {
-        // TODO: validate attachments
+    if let Some(new_section) = &msg.sections {
+        // TODO: validate sections
         // Remove old attachements
-        for i in NODE_ID_2_ATTACHMENT
+        for i in NODE_ID_2_SECTION
             .prefix(msg.id)
             .keys(deps.storage, None, None, Order::Ascending)
             .map(|r| r.unwrap())
             .collect::<Vec<u8>>()
         {
-            NODE_ID_2_ATTACHMENT.remove(deps.storage, (msg.id, i as u8));
+            NODE_ID_2_SECTION.remove(deps.storage, (msg.id, i as u8));
         }
         // Save new attachements
-        for (i, attachment) in new_attachments.iter().enumerate() {
-            NODE_ID_2_ATTACHMENT.save(deps.storage, (msg.id, i as u8), attachment)?;
+        for (i, section) in new_section.iter().enumerate() {
+            NODE_ID_2_SECTION.save(deps.storage, (msg.id, i as u8), section)?;
         }
     }
 

@@ -1,8 +1,8 @@
 use crate::{
     error::ContractError,
     state::storage::{
-        CHILD_RELATIONSHIP, MENTION_NODE_RELATIONSHIP, NODE_ID_2_ATTACHMENT, NODE_ID_2_BODY,
-        NODE_ID_2_FLAG, NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP,
+        CHILD_RELATIONSHIP, MENTION_NODE_RELATIONSHIP, NODE_ID_2_BODY, NODE_ID_2_FLAG,
+        NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP,
         RANKED_CHILDREN, TAG_NODE_RELATIONSHIP,
     },
     util::load_node_metadata,
@@ -72,9 +72,9 @@ pub fn exec_delete_node(
         }
     }
 
-    // Remove attachments
-    for i in 0..node.n_attachments {
-        NODE_ID_2_ATTACHMENT.remove(deps.storage, (id, i));
+    // Remove sections
+    for i in 0..node.n_sections {
+        NODE_ID_2_SECTION.remove(deps.storage, (id, i));
     }
 
     // Remove mentions

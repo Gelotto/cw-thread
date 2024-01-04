@@ -4,7 +4,7 @@ use cw_lib::models::Owner;
 use cw_table::lifecycle::LifecycleExecuteMsg;
 
 use crate::state::{
-    models::{Attachment, Config, TableInfo, DOWN, UP},
+    models::{Config, Section, TableMetadata, DOWN, UP},
     views::NodeView,
 };
 
@@ -20,7 +20,7 @@ pub struct InstantiateMsg {
     pub title: Option<String>,
     pub tags: Option<Vec<String>>,
     pub mentions: Option<Vec<String>>,
-    pub attachments: Option<Vec<Attachment>>,
+    pub sections: Option<Vec<Section>>,
     pub owner: Option<Owner>,
 }
 
@@ -30,7 +30,7 @@ pub struct NodeReplyMsg {
     pub tags: Option<Vec<String>>,
     pub mentions: Option<Vec<String>>,
     pub parent_id: u32,
-    pub attachments: Option<Vec<Attachment>>,
+    pub sections: Option<Vec<Section>>,
 }
 
 #[cw_serde]
@@ -38,7 +38,7 @@ pub struct NodeEditMsg {
     pub id: u32,
     pub title: Option<String>,
     pub body: Option<String>,
-    pub attachments: Option<Vec<Attachment>>,
+    pub sections: Option<Vec<Section>>,
     pub tags: Option<Vec<String>>,
     pub mentions: Option<Vec<String>>,
 }
@@ -122,7 +122,7 @@ pub struct ConfigResponse(pub Config);
 
 #[cw_serde]
 pub struct ThreadInfoResponse {
-    pub table: Option<TableInfo>,
+    pub table: Option<TableMetadata>,
     pub config: Config,
     pub owner: Owner,
     pub root: NodeView,

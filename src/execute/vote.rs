@@ -2,11 +2,12 @@ use crate::{
     error::ContractError,
     msg::NodeVoteMsg,
     state::{
-        models::{NIL, UP},
-        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILDREN},
+        models::{TableMetadata, NIL, ROOT_ID, UP},
+        storage::{NODE_ID_2_METADATA, NODE_ID_ADDR_2_SENTIMENT, RANKED_CHILDREN, TABLE},
     },
 };
 use cosmwasm_std::{attr, Response, Storage};
+use cw_table::{client::Table, msg::KeyValue};
 
 use super::Context;
 
@@ -21,7 +22,8 @@ pub fn exec_votes(
     ctx: Context,
     msgs: Vec<NodeVoteMsg>,
 ) -> Result<Response, ContractError> {
-    let Context { deps, info, .. } = ctx;
+    let Context { deps, info, env } = ctx;
+    let mut resp = Response::new().add_attributes(vec![attr("action", "vote")]);
 
     for msg in msgs.iter() {
         let mut prev_user_sentiment_u8 = NIL;
@@ -62,10 +64,21 @@ pub fn exec_votes(
             RANKED_CHILDREN.save(deps.storage, (parent_id, curr_rank, child_id), &true)?;
         }
 
-        // TODO: Prepare data for updating the thread's table if applicable
+        // Prepare data for updating the thread's table if applicable
+        if child_id == ROOT_ID {
+            if let Some(TableMetadata { address, .. }) = TABLE.may_load(deps.storage)? {
+                let table = Table::new(&address, &env.contract.address);
+                resp = resp.add_message(table.update(
+                    &info.sender,
+                    Some(vec![KeyValue::Int32("rank".to_owned(), Some(curr_rank))]),
+                    None,
+                    None,
+                )?);
+            }
+        }
     }
 
-    Ok(Response::new().add_attributes(vec![attr("action", "vote")]))
+    Ok(resp)
 }
 
 pub fn update_node_rank(

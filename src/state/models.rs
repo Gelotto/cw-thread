@@ -14,13 +14,13 @@ pub struct Config {
 }
 
 #[cw_serde]
-pub struct TableInfo {
+pub struct TableMetadata {
     pub address: Addr,
     pub id: String,
 }
 
 #[cw_serde]
-pub enum Attachment {
+pub enum Section {
     Image {
         uri: String,
         caption: Option<String>,
@@ -34,6 +34,10 @@ pub enum Attachment {
         caption: Option<String>,
         text: String,
     },
+    Text {
+        title: Option<String>,
+        body: Option<String>,
+    },
 }
 
 #[cw_serde]
@@ -45,7 +49,7 @@ pub struct NodeMetadata {
     pub created_by: Addr,
     pub rank: i32,
     pub n_replies: u16,
-    pub n_attachments: u8,
+    pub n_sections: u8,
     pub n_flags: u8,
 }
 
