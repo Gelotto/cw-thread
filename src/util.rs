@@ -7,8 +7,8 @@ use crate::{
     state::{
         models::NodeMetadata,
         storage::{
-            MENTION_NODE_RELATIONSHIP, NODE_ID_2_METADATA, NODE_ID_COUNTER,
-            NODE_MENTION_RELATIONSHIP, NODE_TAG_RELATIONSHIP, TAG_NODE_RELATIONSHIP,
+            IX_MENTION_NODE, IX_NODE_MENTION, IX_NODE_TAG, IX_TAG_NODE, NODE_ID_2_MENTIONS,
+            NODE_ID_2_METADATA, NODE_ID_2_TAGS, NODE_ID_COUNTER,
         },
     },
 };
@@ -39,13 +39,16 @@ pub fn process_tags_and_mentions(
     let mut tags: HashSet<String> = HashSet::with_capacity(2);
     let mut mentions: HashSet<String> = HashSet::with_capacity(2);
 
+    NODE_ID_2_TAGS.save(store, node_id, &maybe_tags.clone().unwrap_or_default())?;
+    NODE_ID_2_MENTIONS.save(store, node_id, &maybe_mentions.clone().unwrap_or_default())?;
+
     for token in maybe_tags.unwrap_or_default().iter() {
         let tag = token.to_lowercase();
         // TODO: validate tag
         if !tags.contains(&tag) {
             let tag = tag.to_owned();
-            TAG_NODE_RELATIONSHIP.save(store, (&tag, node_id), &true)?;
-            NODE_TAG_RELATIONSHIP.save(store, (node_id, &tag), &true)?;
+            IX_TAG_NODE.save(store, (&tag, node_id), &true)?;
+            IX_NODE_TAG.save(store, (node_id, &tag), &true)?;
             tags.insert(tag);
         }
     }
@@ -55,16 +58,17 @@ pub fn process_tags_and_mentions(
             let mention = mention.to_lowercase();
             if !mentions.contains(&mention) {
                 let mention = mention.to_owned();
-                TAG_NODE_RELATIONSHIP.save(store, (&mention, node_id), &true)?;
-                NODE_TAG_RELATIONSHIP.save(store, (node_id, &mention), &true)?;
+                IX_TAG_NODE.save(store, (&mention, node_id), &true)?;
+                IX_NODE_TAG.save(store, (node_id, &mention), &true)?;
                 mentions.insert(mention);
             }
         }
     }
 
+    // We don't enter this block on creation, only update:
     if is_editing {
         // Remove old tags and mentions
-        for tag in NODE_TAG_RELATIONSHIP
+        for tag in IX_NODE_TAG
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
             .filter_map(|r| {
@@ -77,10 +81,10 @@ pub fn process_tags_and_mentions(
             })
             .collect::<Vec<String>>()
         {
-            NODE_TAG_RELATIONSHIP.remove(store, (node_id, &tag));
-            TAG_NODE_RELATIONSHIP.remove(store, (&tag, node_id));
+            IX_NODE_TAG.remove(store, (node_id, &tag));
+            IX_TAG_NODE.remove(store, (&tag, node_id));
         }
-        for mention in NODE_MENTION_RELATIONSHIP
+        for mention in IX_NODE_MENTION
             .prefix(node_id)
             .keys(store, None, None, Order::Ascending)
             .filter_map(|r| {
@@ -93,8 +97,8 @@ pub fn process_tags_and_mentions(
             })
             .collect::<Vec<String>>()
         {
-            NODE_MENTION_RELATIONSHIP.remove(store, (node_id, &mention));
-            MENTION_NODE_RELATIONSHIP.remove(store, (&mention, node_id));
+            IX_NODE_MENTION.remove(store, (node_id, &mention));
+            IX_MENTION_NODE.remove(store, (&mention, node_id));
         }
     }
 

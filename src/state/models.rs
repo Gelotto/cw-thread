@@ -1,5 +1,10 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::{Addr, Storage, Timestamp};
+use cw_table::client::Table;
+
+use crate::error::ContractError;
+
+use super::storage::TABLE;
 
 pub const NIL: u8 = 0;
 pub const DOWN: u8 = 1;
@@ -8,15 +13,22 @@ pub const UP: u8 = 2;
 pub const ROOT_ID: u32 = 0;
 
 #[cw_serde]
-pub struct Config {
-    // TODO: make readonly if is_archived
-    pub is_archived: bool,
-}
-
-#[cw_serde]
 pub struct TableMetadata {
     pub address: Addr,
     pub id: String,
+}
+
+impl TableMetadata {
+    pub fn load_client(
+        store: &dyn Storage,
+        contract_addr: &Addr,
+    ) -> Result<Option<Table>, ContractError> {
+        if let Some(table_info) = TABLE.may_load(store)? {
+            Ok(Some(Table::new(&table_info.address, contract_addr)))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[cw_serde]
@@ -51,6 +63,7 @@ pub struct NodeMetadata {
     pub n_replies: u16,
     pub n_sections: u8,
     pub n_flags: u8,
+    pub depth: u8,
 }
 
 #[cw_serde]

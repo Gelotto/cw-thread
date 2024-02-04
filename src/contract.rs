@@ -5,6 +5,8 @@ use crate::execute::flags::{exec_flag, exec_unflag};
 use crate::execute::lifecycle::{exec_resume, exec_setup, exec_suspend, exec_teardown};
 use crate::execute::reply::exec_reply;
 use crate::execute::set_config::exec_set_config;
+use crate::execute::tip::exec_tip;
+use crate::execute::toggle_save::exec_toggle_save;
 use crate::execute::vote::{exec_vote, exec_votes};
 use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, NodesQueryMsg, QueryMsg};
@@ -43,11 +45,14 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     let ctx = Context { deps, env, info };
     match msg {
-        ExecuteMsg::SetConfig(config) => exec_set_config(ctx, config),
+        ExecuteMsg::SetConfig(updates) => exec_set_config(ctx, updates),
         ExecuteMsg::Reply(msg) => exec_reply(ctx, msg),
         ExecuteMsg::Vote(msg) => exec_vote(ctx, msg),
         ExecuteMsg::VoteMany(msgs) => exec_votes(ctx, msgs),
         ExecuteMsg::Edit(msg) => exec_edit_node(ctx, msg),
+        ExecuteMsg::Tip(token_amount) => exec_tip(ctx, token_amount),
+        ExecuteMsg::Save(ids) => exec_toggle_save(ctx, true, ids),
+        ExecuteMsg::Unsave(ids) => exec_toggle_save(ctx, false, ids),
         ExecuteMsg::Delete { id } => exec_delete_node(ctx, id),
         ExecuteMsg::Flag { id, reason } => exec_flag(ctx, id, reason),
         ExecuteMsg::Unflag { id } => exec_unflag(ctx, id),

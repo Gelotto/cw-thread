@@ -4,16 +4,16 @@ use crate::{
     state::{
         models::{NodeMetadata, TableMetadata},
         storage::{
-            CHILD_RELATIONSHIP, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION,
-            RANKED_CHILDREN, TABLE,
+            ACTIVITY_SCORE, IX_CHILD, IX_RANKED_CHILD, NODE_ID_2_BODY, NODE_ID_2_METADATA,
+            NODE_ID_2_SECTION, N_TOTAL_REPLIES, TABLE,
         },
     },
     util::{next_node_id, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Response};
-use cw_table::client::Table;
+use cw_table::{client::Table, msg::KeyValue};
 
-use super::Context;
+use super::{lifecycle::TABLE_INDEX_ACTIVITY_SCORE, Context};
 
 pub fn exec_reply(
     ctx: Context,
@@ -30,12 +30,17 @@ pub fn exec_reply(
 
     // TODO: Validate all data
 
+    let mut parent_depth: Option<u8> = None;
+
+    N_TOTAL_REPLIES.update(deps.storage, |n| -> Result<_, ContractError> { Ok(n + 1) })?;
+
     // Ensure the parent_id node exists and update its total reply counter
     NODE_ID_2_METADATA.update(
         deps.storage,
         parent_id,
         |maybe_parent| -> Result<_, ContractError> {
             if let Some(mut parent) = maybe_parent {
+                parent_depth = Some(parent.depth);
                 parent.n_replies += 1;
                 Ok(parent)
             } else {
@@ -43,6 +48,13 @@ pub fn exec_reply(
             }
         },
     )?;
+
+    // Abort if we've reached max depth
+    if parent_depth.unwrap_or_default() == u8::MAX {
+        return Err(ContractError::ValidationError {
+            reason: "max reply depth".to_string(),
+        });
+    }
 
     // generate the next node ID for the new reply node
     let child_id = next_node_id(deps.storage)?;
@@ -64,6 +76,7 @@ pub fn exec_reply(
         updated_at: None,
         created_by: info.sender.clone(),
         parent_id: Some(parent_id),
+        depth: parent_depth.unwrap_or_default() + 1,
         n_sections,
         n_replies: 0,
         rank: 0,
@@ -73,10 +86,10 @@ pub fn exec_reply(
     NODE_ID_2_METADATA.save(deps.storage, child_id, &child_metadata)?;
 
     // Add to parent-child relationship
-    CHILD_RELATIONSHIP.save(deps.storage, (parent_id, child_id), &true)?;
+    IX_CHILD.save(deps.storage, (parent_id, child_id), &true)?;
 
     // Add to ranked reply relationship
-    RANKED_CHILDREN.save(deps.storage, (parent_id, 0, child_id), &true)?;
+    IX_RANKED_CHILD.save(deps.storage, (parent_id, 0, child_id), &true)?;
 
     process_tags_and_mentions(deps.storage, child_id, tags, mentions, false)?;
 
@@ -86,10 +99,22 @@ pub fn exec_reply(
         attr("reply_id", child_id.to_string()),
     ]);
 
+    let activity_score = ACTIVITY_SCORE.update(deps.storage, |n| -> Result<_, ContractError> {
+        Ok(n + (u8::MAX / child_metadata.depth) as u32)
+    })?;
+
     // TODO: Prepare data for updating the thread's table if applicable
     if let Some(TableMetadata { address, .. }) = TABLE.may_load(deps.storage)? {
         let table = Table::new(&address, &env.contract.address);
-        resp = resp.add_message(table.update(&info.sender, None, None, None)?);
+        resp = resp.add_message(table.update(
+            &info.sender,
+            Some(vec![KeyValue::Uint32(
+                TABLE_INDEX_ACTIVITY_SCORE.into(),
+                Some(activity_score),
+            )]),
+            None,
+            None,
+        )?);
     }
 
     Ok(resp)

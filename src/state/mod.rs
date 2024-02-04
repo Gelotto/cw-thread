@@ -2,7 +2,8 @@ pub mod models;
 pub mod storage;
 pub mod views;
 
-use cosmwasm_std::Response;
+use cosmwasm_std::{Addr, DepsMut, Response};
+use cw_acl::client::Acl;
 use cw_lib::models::Owner;
 
 use crate::{
@@ -10,14 +11,17 @@ use crate::{
 };
 
 use self::{
-    models::{Config, NodeMetadata, ROOT_ID},
+    models::{NodeMetadata, ROOT_ID},
     storage::{
-        CONFIG, NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE,
-        NODE_ID_COUNTER, OWNER,
+        ACTIVITY_SCORE, CONFIG_TIP_TOKEN_ALLOWLIST, NODE_ID_2_BODY, NODE_ID_2_METADATA,
+        NODE_ID_2_SECTION, NODE_ID_2_TITLE, NODE_ID_COUNTER, N_TOTAL_REPLIES, OWNER,
+        TIP_TOKEN_LUTAB,
     },
 };
 
 /// Top-level initialization of contract state
+/// TODO: VALIDATE MSG
+/// TODO: ADD PARAMS TO CONFIG FOR MAX LEN OF VARIOUS THINGS
 pub fn init(
     ctx: Context,
     msg: InstantiateMsg,
@@ -28,7 +32,13 @@ pub fn init(
         deps.api.addr_validate(owner.to_addr().as_str())?;
     }
 
-    CONFIG.save(deps.storage, &Config { is_archived: false })?;
+    CONFIG_TIP_TOKEN_ALLOWLIST.save(deps.storage, &msg.config.tip_tokens)?;
+    ACTIVITY_SCORE.save(deps.storage, &0)?;
+    N_TOTAL_REPLIES.save(deps.storage, &0)?;
+
+    for token in msg.config.tip_tokens.iter() {
+        TIP_TOKEN_LUTAB.save(deps.storage, &token.get_key(), &true)?;
+    }
 
     OWNER.save(
         deps.storage,
@@ -64,10 +74,39 @@ pub fn init(
             n_sections,
             n_replies: 0,
             n_flags: 0,
+            depth: 0,
         },
     )?;
 
     process_tags_and_mentions(deps.storage, ROOT_ID, msg.tags, msg.mentions, false)?;
 
     Ok(Response::new().add_attribute("action", "instantiate"))
+}
+
+pub fn authorize_action(
+    deps: &DepsMut,
+    principal: &Addr,
+    action: &str,
+) -> Result<(), ContractError> {
+    if !is_action_authorized(deps, principal, action)? {
+        Err(ContractError::NotAuthorized {
+            reason: "Owner authorization required".to_owned(),
+        })
+    } else {
+        Ok(())
+    }
+}
+
+pub fn is_action_authorized(
+    deps: &DepsMut,
+    principal: &Addr,
+    action: &str,
+) -> Result<bool, ContractError> {
+    Ok(match OWNER.load(deps.storage)? {
+        Owner::Address(addr) => *principal == addr,
+        Owner::Acl(acl_addr) => {
+            let acl = Acl::new(&acl_addr);
+            acl.is_allowed(&deps.querier, principal, action)?
+        },
+    })
 }

@@ -2,21 +2,24 @@ use std::marker::PhantomData;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Order, Storage};
+use cw_lib::models::TokenV2;
 use cw_storage_plus::Bound;
 
 use crate::{error::ContractError, msg::Sentiment};
 
 use super::{
-    models::{NodeMetadata, Section, NIL},
+    models::{NodeMetadata, Section},
     storage::{
-        NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE,
-        NODE_ID_ADDR_2_SENTIMENT, NODE_MENTION_RELATIONSHIP, NODE_TAG_RELATIONSHIP,
+        CONFIG_TIP_TOKEN_ALLOWLIST, IX_ADDR_SAVED_ID, IX_NODE_MENTION, IX_NODE_TAG, NODE_ID_2_BODY,
+        NODE_ID_2_MENTIONS, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TAGS, NODE_ID_2_TITLE,
+        NODE_ID_ADDR_2_SENTIMENT,
     },
 };
 
 #[cw_serde]
 pub struct NodeAccountView {
-    pub sentiment: Sentiment,
+    pub sentiment: Option<Sentiment>,
+    pub saved: bool,
 }
 
 #[cw_serde]
@@ -26,6 +29,8 @@ pub struct NodeView {
     pub body: String,
     pub sections: Vec<Section>,
     pub account: Option<NodeAccountView>,
+    pub tags: Vec<String>,
+    pub mentions: Vec<String>,
 }
 
 impl NodeView {
@@ -36,6 +41,8 @@ impl NodeView {
     ) -> Result<NodeView, ContractError> {
         let metadata = NODE_ID_2_METADATA.load(store, id)?;
         let body = NODE_ID_2_BODY.load(store, id)?;
+        let mentions = NODE_ID_2_MENTIONS.load(store, id)?;
+        let tags = NODE_ID_2_TAGS.load(store, id)?;
         let title = NODE_ID_2_TITLE.may_load(store, id)?;
         let sections = NODE_ID_2_SECTION
             .range(
@@ -53,11 +60,14 @@ impl NodeView {
         let account = match account_addr {
             None => None,
             Some(addr) => Some(NodeAccountView {
-                sentiment: Sentiment::from_u8(
-                    NODE_ID_ADDR_2_SENTIMENT
-                        .may_load(store, (id, addr))?
-                        .unwrap_or(NIL),
-                ),
+                saved: IX_ADDR_SAVED_ID.has(store, (addr, id)),
+                sentiment: if let Some(sent_u8) =
+                    NODE_ID_ADDR_2_SENTIMENT.may_load(store, (id, addr))?
+                {
+                    Sentiment::from_u8(sent_u8)
+                } else {
+                    None
+                },
             }),
         };
 
@@ -65,8 +75,23 @@ impl NodeView {
             metadata,
             title,
             body,
+            mentions,
+            tags,
             sections,
             account,
+        })
+    }
+}
+
+#[cw_serde]
+pub struct ConfigView {
+    pub tip_tokens: Vec<TokenV2>,
+}
+
+impl ConfigView {
+    pub fn load(store: &dyn Storage) -> Result<Self, ContractError> {
+        Ok(Self {
+            tip_tokens: CONFIG_TIP_TOKEN_ALLOWLIST.load(store)?,
         })
     }
 }
@@ -75,7 +100,7 @@ pub fn load_tags(
     store: &dyn Storage,
     node_id: u32,
 ) -> Result<Vec<String>, ContractError> {
-    Ok(NODE_TAG_RELATIONSHIP
+    Ok(IX_NODE_TAG
         .prefix(node_id)
         .keys(store, None, None, Order::Ascending)
         .map(|k| k.unwrap())
@@ -86,7 +111,7 @@ pub fn load_mentions(
     store: &dyn Storage,
     node_id: u32,
 ) -> Result<Vec<String>, ContractError> {
-    Ok(NODE_MENTION_RELATIONSHIP
+    Ok(IX_NODE_MENTION
         .prefix(node_id)
         .keys(store, None, None, Order::Ascending)
         .map(|k| k.unwrap())

@@ -4,6 +4,8 @@ pub mod flags;
 pub mod lifecycle;
 pub mod reply;
 pub mod set_config;
+pub mod tip;
+pub mod toggle_save;
 pub mod vote;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo};

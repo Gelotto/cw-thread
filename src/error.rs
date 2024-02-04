@@ -6,6 +6,9 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("InsufficientFunds: {details:?}")]
+    InsufficientFunds { details: String },
+
     #[error("NotAuthorized: {reason:?}")]
     NotAuthorized { reason: String },
 
@@ -17,6 +20,9 @@ pub enum ContractError {
 
     #[error("ValidationError: {reason:?}")]
     ValidationError { reason: String },
+
+    #[error("UnauthorizedTipToken: token type not allowed for tips: {token}")]
+    UnauthorizedTipToken { token: String },
 }
 
 impl From<ContractError> for StdError {

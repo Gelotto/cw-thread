@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use cw_lib::models::Owner;
+use cw_lib::models::{Owner, TokenAmountV2, TokenV2};
 use cw_table::lifecycle::LifecycleExecuteMsg;
 
 use crate::state::{
-    models::{Config, Section, TableMetadata, DOWN, UP},
-    views::NodeView,
+    models::{Section, TableMetadata, DOWN, UP},
+    views::{ConfigView, NodeView},
 };
 
 #[cw_serde]
@@ -22,6 +22,7 @@ pub struct InstantiateMsg {
     pub mentions: Option<Vec<String>>,
     pub sections: Option<Vec<Section>>,
     pub owner: Option<Owner>,
+    pub config: ConfigView,
 }
 
 #[cw_serde]
@@ -50,11 +51,13 @@ pub struct NodeVoteMsg {
 }
 
 impl Sentiment {
-    pub fn from_u8(u8_sentiment: u8) -> Self {
+    pub fn from_u8(u8_sentiment: u8) -> Option<Self> {
         if u8_sentiment == UP {
-            Self::Up
+            Some(Self::Up)
+        } else if u8_sentiment == DOWN {
+            Some(Self::Down)
         } else {
-            Self::Down
+            None
         }
     }
 
@@ -67,16 +70,24 @@ impl Sentiment {
 }
 
 #[cw_serde]
+pub struct ConfigUpdateMsg {
+    pub tip_tokens: Option<Vec<TokenV2>>,
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     Lifecycle(LifecycleExecuteMsg),
-    SetConfig(Config),
+    SetConfig(ConfigUpdateMsg),
     Reply(NodeReplyMsg),
+    Save(Vec<u32>),
+    Unsave(Vec<u32>),
     Vote(NodeVoteMsg),
     VoteMany(Vec<NodeVoteMsg>),
     Edit(NodeEditMsg),
     Delete { id: u32 },
     Flag { id: u32, reason: Option<String> },
     Unflag { id: u32 },
+    Tip(TokenAmountV2),
 }
 
 #[cw_serde]
@@ -118,14 +129,16 @@ pub enum QueryMsg {
 pub struct MigrateMsg {}
 
 #[cw_serde]
-pub struct ConfigResponse(pub Config);
+pub struct ConfigResponse(pub ConfigView);
 
 #[cw_serde]
 pub struct ThreadInfoResponse {
     pub table: Option<TableMetadata>,
-    pub config: Config,
+    pub config: ConfigView,
     pub owner: Owner,
     pub root: NodeView,
+    pub n_total_replies: u32,
+    pub tips: Vec<TokenAmountV2>,
 }
 
 #[cw_serde]

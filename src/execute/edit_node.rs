@@ -1,7 +1,7 @@
 use crate::{
     error::ContractError,
     msg::NodeEditMsg,
-    state::storage::{NODE_ID_2_BODY, NODE_ID_2_SECTION, NODE_ID_2_TITLE},
+    state::storage::{NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE},
     util::{load_node_metadata, process_tags_and_mentions},
 };
 use cosmwasm_std::{attr, Order, Response};
@@ -12,8 +12,11 @@ pub fn exec_edit_node(
     ctx: Context,
     msg: NodeEditMsg,
 ) -> Result<Response, ContractError> {
-    let Context { deps, .. } = ctx;
-    let metadata = load_node_metadata(deps.storage, msg.id, true)?.unwrap();
+    let Context { deps, env, .. } = ctx;
+    let mut metadata = load_node_metadata(deps.storage, msg.id, true)?.unwrap();
+
+    metadata.updated_at = Some(env.block.time);
+    NODE_ID_2_METADATA.save(deps.storage, metadata.id, &metadata)?;
 
     if let Some(new_body) = &msg.body {
         process_tags_and_mentions(deps.storage, msg.id, msg.tags, msg.mentions, true)?;

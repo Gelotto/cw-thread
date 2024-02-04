@@ -7,7 +7,7 @@ use crate::{
     error::ContractError,
     msg::{NodeViewByTagPaginationResponse, NodeViewRepliesPaginationResponse},
     state::{
-        storage::{MENTION_NODE_RELATIONSHIP, RANKED_CHILDREN, TAG_NODE_RELATIONSHIP},
+        storage::{IX_MENTION_NODE, IX_RANKED_CHILD, IX_TAG_NODE},
         views::NodeView,
     },
     util::load_node_metadata,
@@ -66,7 +66,7 @@ pub fn query_child_nodes(
     let mut replies: Vec<NodeView> = Vec::with_capacity(page_size);
     let mut cursor: Option<(u32, i32, u32)> = None;
 
-    for result in RANKED_CHILDREN
+    for result in IX_RANKED_CHILD
         .keys(deps.storage, stop, start.clone(), Order::Descending)
         .take(page_size)
     {
@@ -123,8 +123,8 @@ pub fn query_nodes_by_tag_or_mention(
         None
     };
     let (map, tag) = match wrapped_tag {
-        TagWrapper::Tag(s) => (TAG_NODE_RELATIONSHIP, s.to_lowercase()),
-        TagWrapper::Mention(s) => (MENTION_NODE_RELATIONSHIP, s.to_lowercase()),
+        TagWrapper::Tag(s) => (IX_TAG_NODE, s.to_lowercase()),
+        TagWrapper::Mention(s) => (IX_MENTION_NODE, s.to_lowercase()),
     };
 
     for result in map

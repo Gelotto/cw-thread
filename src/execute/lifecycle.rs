@@ -2,7 +2,7 @@ use crate::{
     error::ContractError,
     state::{
         models::{TableMetadata, ROOT_ID},
-        storage::TABLE,
+        storage::{NODE_ID_2_METADATA, TABLE},
         views::{load_mentions, load_tags},
     },
     util::load_node_metadata,
@@ -15,6 +15,51 @@ use cw_table::{
 };
 
 use super::Context;
+
+pub const TABLE_INDEX_ACTIVITY_SCORE: &str = "activity";
+pub const TABLE_INDEX_RANK: &str = "rank";
+
+pub fn exec_setup(
+    ctx: Context,
+    args: LifecycleSetupArgs,
+) -> Result<Response, ContractError> {
+    let Context {
+        deps, env, info, ..
+    } = ctx;
+    let resp = Response::new().add_attributes(vec![attr("action", "setup")]);
+    let mut meta = load_node_metadata(deps.storage, ROOT_ID, true)?.unwrap();
+
+    meta.created_by = args.initiator;
+    NODE_ID_2_METADATA.save(deps.storage, meta.id, &meta)?;
+
+    save_table_info(deps.storage, &info.sender, &args.id)?;
+
+    let indices = vec![
+        KeyValue::Int32(TABLE_INDEX_RANK.into(), Some(meta.rank)),
+        KeyValue::Uint32(TABLE_INDEX_ACTIVITY_SCORE.into(), Some(0)),
+    ];
+
+    let relationships_to_add: Vec<Relationship> = vec![Relationship {
+        address: meta.created_by.clone(),
+        name: "creator".to_owned(),
+        unique: false,
+    }];
+
+    let relationshps = RelationshipUpdates {
+        remove: None,
+        add: Some(relationships_to_add),
+    };
+
+    let tags = prepare_tag_updates(deps.storage, ROOT_ID)?;
+    let table = Table::new(&info.sender, &env.contract.address);
+
+    Ok(resp.add_message(table.update(
+        &info.sender,
+        Some(indices),
+        Some(tags),
+        Some(relationshps),
+    )?))
+}
 
 fn save_table_info(
     store: &mut dyn Storage,
@@ -38,7 +83,7 @@ fn save_table_info(
     Ok(())
 }
 
-pub fn prepare_tag_updates(
+fn prepare_tag_updates(
     store: &dyn Storage,
     node_id: u32,
 ) -> Result<TagUpdates, ContractError> {
@@ -64,46 +109,6 @@ pub fn prepare_tag_updates(
         remove: None,
         add: Some(tag_updates_to_add),
     })
-}
-
-pub fn exec_setup(
-    ctx: Context,
-    args: LifecycleSetupArgs,
-) -> Result<Response, ContractError> {
-    let Context {
-        deps, env, info, ..
-    } = ctx;
-    let resp = Response::new().add_attributes(vec![attr("action", "setup")]);
-    let meta = load_node_metadata(deps.storage, ROOT_ID, true)?.unwrap();
-
-    save_table_info(deps.storage, &info.sender, &args.id)?;
-
-    let indices = vec![
-        KeyValue::Int32("rank".into(), Some(meta.rank)), // TODO: implement in table
-        KeyValue::String("created_by".into(), Some(meta.created_by.clone().into())),
-        KeyValue::Uint16("n_replies".into(), Some(meta.n_replies)),
-    ];
-
-    let relationships_to_add: Vec<Relationship> = vec![Relationship {
-        address: meta.created_by.clone(),
-        name: "creator".to_owned(),
-        unique: false,
-    }];
-
-    let relationshps = RelationshipUpdates {
-        remove: None,
-        add: Some(relationships_to_add),
-    };
-
-    let tags = prepare_tag_updates(deps.storage, ROOT_ID)?;
-    let table = Table::new(&info.sender, &env.contract.address);
-
-    Ok(resp.add_message(table.update(
-        &info.sender,
-        Some(indices),
-        Some(tags),
-        Some(relationshps),
-    )?))
 }
 
 pub fn exec_teardown(
