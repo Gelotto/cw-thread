@@ -112,22 +112,52 @@ fn prepare_tag_updates(
 }
 
 pub fn exec_teardown(
-    _ctx: Context,
+    ctx: Context,
     _args: LifecycleArgs,
 ) -> Result<Response, ContractError> {
+    let Context { deps, info, .. } = ctx;
+
+    // Only the table contract can teardown
+    let table_metadata = TABLE.load(deps.storage)?;
+    if info.sender != table_metadata.address {
+        return Err(ContractError::NotAuthorized {
+            reason: "Only table contract can teardown".to_owned(),
+        });
+    }
+
     Ok(Response::new().add_attributes(vec![attr("action", "teardown")]))
 }
 
 pub fn exec_suspend(
-    _ctx: Context,
+    ctx: Context,
     _args: LifecycleArgs,
 ) -> Result<Response, ContractError> {
+    let Context { deps, info, .. } = ctx;
+
+    // Only the table contract can suspend
+    let table_metadata = TABLE.load(deps.storage)?;
+    if info.sender != table_metadata.address {
+        return Err(ContractError::NotAuthorized {
+            reason: "Only table contract can suspend".to_owned(),
+        });
+    }
+
     Ok(Response::new().add_attributes(vec![attr("action", "suspend")]))
 }
 
 pub fn exec_resume(
-    _ctx: Context,
+    ctx: Context,
     _args: LifecycleArgs,
 ) -> Result<Response, ContractError> {
+    let Context { deps, info, .. } = ctx;
+
+    // Only the table contract can resume
+    let table_metadata = TABLE.load(deps.storage)?;
+    if info.sender != table_metadata.address {
+        return Err(ContractError::NotAuthorized {
+            reason: "Only table contract can resume".to_owned(),
+        });
+    }
+
     Ok(Response::new().add_attributes(vec![attr("action", "resume")]))
 }

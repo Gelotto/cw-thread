@@ -3,6 +3,7 @@ use crate::{
     msg::NodeEditMsg,
     state::storage::{NODE_ID_2_BODY, NODE_ID_2_METADATA, NODE_ID_2_SECTION, NODE_ID_2_TITLE},
     util::{load_node_metadata, process_tags_and_mentions},
+    validation::{validate_body, validate_mentions, validate_sections, validate_tags, validate_title},
 };
 use cosmwasm_std::{attr, Order, Response};
 
@@ -12,15 +13,24 @@ pub fn exec_edit_node(
     ctx: Context,
     msg: NodeEditMsg,
 ) -> Result<Response, ContractError> {
-    let Context { deps, env, .. } = ctx;
+    let Context { deps, env, info } = ctx;
     let mut metadata = load_node_metadata(deps.storage, msg.id, true)?.unwrap();
+
+    // Only the post creator can edit it
+    if metadata.created_by != info.sender {
+        return Err(ContractError::NotAuthorized {
+            reason: "Only the post creator can edit it".to_owned(),
+        });
+    }
 
     metadata.updated_at = Some(env.block.time);
     NODE_ID_2_METADATA.save(deps.storage, metadata.id, &metadata)?;
 
     if let Some(new_body) = &msg.body {
+        validate_body(new_body)?;
+        validate_tags(&msg.tags)?;
+        validate_mentions(&msg.mentions)?;
         process_tags_and_mentions(deps.storage, msg.id, msg.tags, msg.mentions, true)?;
-        // TODO: validate new body
         NODE_ID_2_BODY.save(deps.storage, msg.id, new_body)?;
         if msg.title.is_some() {
             if metadata.parent_id.is_some() {
@@ -28,15 +38,15 @@ pub fn exec_edit_node(
                     reason: "Only the root node has a title".to_owned(),
                 });
             } else {
-                // TODO: validate new title
                 let title = msg.title.unwrap();
+                validate_title(&title)?;
                 NODE_ID_2_TITLE.save(deps.storage, msg.id, &title)?;
             }
         }
     }
 
     if let Some(new_section) = &msg.sections {
-        // TODO: validate sections
+        validate_sections(&msg.sections)?;
         // Remove old attachements
         for i in NODE_ID_2_SECTION
             .prefix(msg.id)

@@ -6,7 +6,8 @@ use crate::{
     },
     util::load_node_metadata,
 };
-use cosmwasm_std::{attr, Addr, Coin, Response, Storage, Uint128, WasmMsg};
+use cosmwasm_std::{attr, to_json_binary, Addr, Coin, Response, Storage, Uint128, WasmMsg};
+use cw20::Cw20ExecuteMsg;
 use cw_lib::{
     models::{TokenAmountV2, TokenV2},
     utils::funds::{build_send_msg, has_funds},
@@ -89,12 +90,43 @@ fn tip_native(
 }
 
 fn tip_cw20(
-    _store: &mut dyn Storage,
-    _creator: &Addr,
-    _cw20_addr: &Addr,
-    _amount: Uint128,
+    store: &mut dyn Storage,
+    creator: &Addr,
+    cw20_addr: &Addr,
+    amount: Uint128,
 ) -> Result<Response, ContractError> {
-    todo!()
+    // Check if this CW20 token is in the allowlist
+    let token_key = cw20_addr.to_string();
+    if !TIP_TOKEN_LUTAB.has(store, &token_key) {
+        return Err(ContractError::UnauthorizedTipToken {
+            token: token_key,
+        });
+    }
+
+    // Update total tip amounts for this token
+    TOTAL_TIP_AMOUNTS.update(store, &token_key, |maybe_total| -> Result<_, ContractError> {
+        Ok(maybe_total.unwrap_or_default() + amount)
+    })?;
+
+    // Build CW20 transfer message
+    let transfer_msg = Cw20ExecuteMsg::Transfer {
+        recipient: creator.to_string(),
+        amount,
+    };
+
+    let wasm_msg = WasmMsg::Execute {
+        contract_addr: cw20_addr.to_string(),
+        msg: to_json_binary(&transfer_msg)?,
+        funds: vec![],
+    };
+
+    Ok(Response::new()
+        .add_message(wasm_msg)
+        .add_attributes(vec![
+            attr("action", "tip"),
+            attr("tip_amount", amount.to_string()),
+            attr("tip_token", cw20_addr.to_string()),
+        ]))
 }
 
 fn increment_total_tip_amount(

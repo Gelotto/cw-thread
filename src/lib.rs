@@ -8,3 +8,7 @@ pub mod msg;
 pub mod query;
 pub mod state;
 mod util;
+mod validation;
+
+#[cfg(test)]
+mod tests;

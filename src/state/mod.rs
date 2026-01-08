@@ -7,7 +7,11 @@ use cw_acl::client::Acl;
 use cw_lib::models::Owner;
 
 use crate::{
-    error::ContractError, execute::Context, msg::InstantiateMsg, util::process_tags_and_mentions,
+    error::ContractError,
+    execute::Context,
+    msg::InstantiateMsg,
+    util::process_tags_and_mentions,
+    validation::{validate_body, validate_mentions, validate_sections, validate_tags, validate_title},
 };
 
 use self::{
@@ -20,8 +24,6 @@ use self::{
 };
 
 /// Top-level initialization of contract state
-/// TODO: VALIDATE MSG
-/// TODO: ADD PARAMS TO CONFIG FOR MAX LEN OF VARIOUS THINGS
 pub fn init(
     ctx: Context,
     msg: InstantiateMsg,
@@ -31,6 +33,17 @@ pub fn init(
     if let Some(owner) = &msg.owner {
         deps.api.addr_validate(owner.to_addr().as_str())?;
     }
+
+    // Validate all input
+    if let Some(ref title) = msg.title {
+        validate_title(title)?;
+    }
+    if let Some(ref body) = msg.body {
+        validate_body(body)?;
+    }
+    validate_tags(&msg.tags)?;
+    validate_mentions(&msg.mentions)?;
+    validate_sections(&msg.sections)?;
 
     CONFIG_TIP_TOKEN_ALLOWLIST.save(deps.storage, &msg.config.tip_tokens)?;
     ACTIVITY_SCORE.save(deps.storage, &0)?;

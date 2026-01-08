@@ -9,6 +9,7 @@ use crate::{
         },
     },
     util::{next_node_id, process_tags_and_mentions},
+    validation::{validate_body, validate_mentions, validate_sections, validate_tags},
 };
 use cosmwasm_std::{attr, Response};
 use cw_table::{client::Table, msg::KeyValue};
@@ -28,7 +29,11 @@ pub fn exec_reply(
         tags,
     } = msg;
 
-    // TODO: Validate all data
+    // Validate all input
+    validate_body(&body)?;
+    validate_tags(&tags)?;
+    validate_mentions(&mentions)?;
+    validate_sections(&sections)?;
 
     let mut parent_depth: Option<u8> = None;
 

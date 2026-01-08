@@ -6,6 +6,14 @@ use super::models::{FlagMetadata, NodeMetadata, Section, TableMetadata};
 
 pub const MAX_TIP_TOKEN_TYPES: usize = 10;
 
+// Validation limits
+pub const MAX_TITLE_LENGTH: usize = 200;
+pub const MAX_BODY_LENGTH: usize = 50_000;
+pub const MAX_TAGS: usize = 10;
+pub const MAX_TAG_LENGTH: usize = 30;
+pub const MAX_MENTIONS: usize = 20;
+pub const MAX_SECTIONS: usize = 20;
+
 pub const OWNER: Item<Owner> = Item::new("owner");
 pub const CONFIG_TIP_TOKEN_ALLOWLIST: Item<Vec<TokenV2>> = Item::new("config_tip_token_allowlist");
 pub const TABLE: Item<TableMetadata> = Item::new("table");

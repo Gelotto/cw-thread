@@ -1,12 +1,11 @@
 use cosmwasm_std::Addr;
-use cw_acl::state::OWNER;
 use cw_lib::models::TokenAmountV2;
 
 use crate::{
     error::ContractError,
     msg::ThreadInfoResponse,
     state::{
-        storage::{N_TOTAL_REPLIES, TABLE, TOTAL_TIP_AMOUNTS},
+        storage::{N_TOTAL_REPLIES, OWNER, TABLE, TOTAL_TIP_AMOUNTS},
         views::{ConfigView, NodeView},
     },
 };

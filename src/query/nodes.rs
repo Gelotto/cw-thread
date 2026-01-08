@@ -136,7 +136,7 @@ pub fn query_nodes_by_tag_or_mention(
         nodes.push(NodeView::load(deps.storage, node_id, &sender)?);
     }
     Ok(NodeViewByTagPaginationResponse {
-        cursor: nodes.last().and_then(|u| Some(u.metadata.id)),
+        cursor: nodes.last().map(|u| u.metadata.id),
         nodes,
     })
 }

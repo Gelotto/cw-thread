@@ -25,6 +25,14 @@ use cw_table::lifecycle::LifecycleExecuteMsg;
 const CONTRACT_NAME: &str = "crates.io:cw-thread";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Instantiates a new discussion thread contract.
+///
+/// Creates the root node of the thread hierarchy with an optional title, body,
+/// sections, tags, and mentions. Validates all input and initializes the contract
+/// state including owner, tip token allowlist, and activity tracking.
+///
+/// Only the owner (or authorized ACL principals) can perform privileged operations
+/// like deleting any post or updating configuration.
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
@@ -36,6 +44,15 @@ pub fn instantiate(
     Ok(state::init(Context { deps, env, info }, msg)?)
 }
 
+/// Executes thread operations including creating replies, voting, editing,
+/// deleting, tipping, flagging, and lifecycle management.
+///
+/// Operations are authorized based on the sender:
+/// - Reply, Vote, Tip, Save, Flag: Any user
+/// - Edit: Post creator only
+/// - Delete: Post creator or contract owner
+/// - SetConfig: Contract owner only
+/// - Lifecycle (Setup/Teardown/Suspend/Resume): Table contract only
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
@@ -65,6 +82,14 @@ pub fn execute(
     }
 }
 
+/// Queries thread data including thread info, nodes by ID, child nodes,
+/// ancestor nodes, and nodes by tag or mention.
+///
+/// All queries are read-only and do not modify state. Some queries support
+/// pagination for efficient data retrieval of large result sets.
+///
+/// Query results include node metadata, content, voting stats, and user-specific
+/// data like save status and personal vote sentiment.
 #[entry_point]
 pub fn query(
     deps: Deps,
@@ -112,6 +137,10 @@ pub fn query(
     Ok(result)
 }
 
+/// Migrates the contract to a new version.
+///
+/// Updates the contract version metadata stored on-chain. This is called
+/// when upgrading the contract code to a new version.
 #[entry_point]
 pub fn migrate(
     deps: DepsMut,
